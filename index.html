@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholar OS — My 6th Grade Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #b07d4f;               /* customizable */
+    --bg: #f7f1e6;
+    --card: #fffdf7;
+    --line: #eadfc9;
+    --ink: #4a3f30;
+    --muted: #a2927c;
+    --soft: #f3e9d7;
+    --good: #7d9070;
+    --warn: #c98a3d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    background-image: radial-gradient(rgba(176,125,79,.05) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .serif { font-family: "Fraunces", Georgia, "Times New Roman", serif; }
+
+  /* ── Banner ─────────────────────────── */
+  .banner {
+    background:
+      radial-gradient(circle at 12% 25%, rgba(255,255,255,.5) 0 9%, transparent 10%),
+      radial-gradient(circle at 78% 70%, rgba(255,255,255,.35) 0 12%, transparent 13%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,.18) 0 14px, transparent 14px 28px),
+      linear-gradient(135deg, var(--soft), #eaddc4 60%, #e2d0b2);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    text-align: center;
+    padding: 72px 20px 96px;
+    position: relative;
+  }
+  .banner h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 700; letter-spacing: .01em; }
+  .banner p { color: var(--muted); margin-top: 8px; font-size: 1rem; }
+  .banner-tools { position: absolute; top: 16px; right: 18px; display: flex; gap: 8px; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 20px; padding: 7px 16px; font-size: .82rem; font-weight: 600;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(74,63,48,.08);
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.07); color: #fff; }
+  .btn.danger:hover { border-color: #c0604f; color: #c0604f; }
+
+  /* ── Customize bar ──────────────────── */
+  .custom-bar {
+    display: none; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--soft); border: 1px dashed var(--accent);
+    border-radius: 14px; padding: 12px 16px; margin-bottom: 20px; font-size: .85rem;
+  }
+  body.editing .custom-bar { display: flex; }
+  .custom-bar .hint { color: var(--muted); font-size: .78rem; }
+  .swatches { display: flex; gap: 8px; align-items: center; }
+  .swatch {
+    width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5);
+  }
+  .swatch.active { border-color: var(--ink); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+  .pull-up { margin-top: -56px; position: relative; z-index: 1; }
+
+  /* ── Cards ──────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 16px rgba(74,63,48,.06);
+  }
+  .card h2 {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--accent); margin-bottom: 14px;
+    border-bottom: 2px solid var(--soft); padding-bottom: 8px;
+  }
+
+  .quote {
+    background: var(--soft); border-left: 4px solid var(--accent);
+    border-radius: 14px; padding: 15px 20px; font-style: italic;
+    color: var(--ink); margin-bottom: 20px; font-size: .95rem;
+  }
+
+  /* ── Study card ─────────────────────── */
+  .study-card { text-align: center; }
+  .study-card p { font-size: .85rem; color: var(--muted); margin-bottom: 14px; }
+  .study-btn {
+    width: 100%; border: none; background: var(--accent); color: #fff;
+    border-radius: 14px; padding: 14px; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(74,63,48,.2);
+    transition: transform .15s, filter .15s;
+  }
+  .study-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .study-note { margin-top: 10px; font-size: .75rem; color: var(--muted); min-height: 1em; }
+
+  /* ── Account overlay ────────────────── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--bg);
+    background-image: radial-gradient(rgba(176,125,79,.05) 1px, transparent 1px);
+    background-size: 22px 22px;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 36px 32px; max-width: 420px; width: 100%; text-align: center;
+    box-shadow: 0 10px 40px rgba(74,63,48,.12);
+  }
+  .overlay-card h1 { font-size: 2rem; margin-bottom: 4px; }
+  .overlay-card > p { color: var(--muted); font-size: .9rem; margin-bottom: 20px; }
+  .acct-chip {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: var(--soft); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 16px; margin-bottom: 10px; cursor: pointer; font-size: 1rem;
+    font-weight: 600; color: var(--ink); text-align: left; font-family: inherit;
+  }
+  .acct-chip:hover { border-color: var(--accent); }
+  .acct-chip .avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; flex-shrink: 0;
+  }
+  .acct-chip .name { flex: 1; }
+  .acct-del { border: none; background: none; color: #d8c9b0; cursor: pointer; font-size: 1.1rem; padding: 4px; }
+  .acct-del:hover { color: #c0604f; }
+  .acct-form { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; border-top: 1px solid var(--line); padding-top: 18px; }
+  .acct-form input {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    font-family: inherit; font-size: .9rem; background: #fff;
+  }
+  .acct-form .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: left; }
+  .pin-row { display: flex; gap: 8px; margin-top: 10px; }
+  .pin-row input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 1rem; text-align: center; letter-spacing: .3em; }
+
+  /* ── Top grid ───────────────────────── */
+  .grid { display: grid; grid-template-columns: 240px 1fr 260px; gap: 20px; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Clock */
+  .clock-card { text-align: center; }
+  .clock-digits { display: flex; justify-content: center; gap: 8px; }
+  .digit {
+    background: var(--accent); color: #fffdf7; font-weight: 700;
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 2.6rem; border-radius: 12px; padding: 8px 4px; min-width: 64px;
+    position: relative; box-shadow: 0 4px 10px rgba(74,63,48,.18);
+  }
+  .digit::after {
+    content: ""; position: absolute; left: 6%; right: 6%; top: 50%;
+    height: 1px; background: rgba(255,255,255,.4);
+  }
+  .digit small { display: block; font-size: .58rem; font-family: sans-serif; font-weight: 600; opacity: .75; letter-spacing: .12em; margin-top: 2px; }
+  .clock-colon { font-size: 2.4rem; font-weight: 800; color: var(--accent); align-self: center; }
+  .clock-date { margin-top: 12px; color: var(--muted); font-size: .85rem; }
+
+  /* Mini calendar */
+  .mini-cal table { width: 100%; border-collapse: collapse; font-size: .78rem; text-align: center; }
+  .mini-cal th { color: var(--muted); font-weight: 600; padding: 3px 0; }
+  .mini-cal td { padding: 4px 0; border-radius: 8px; }
+  .mini-cal td.today { background: var(--accent); color: #fff; font-weight: 700; }
+  .mini-cal td.has-event { color: var(--accent); font-weight: 700; text-decoration: underline; }
+  .mini-cal .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .mini-cal .cal-head strong { font-size: .85rem; }
+  .mini-cal button { border: none; background: var(--soft); color: var(--ink); border-radius: 8px; width: 26px; height: 26px; cursor: pointer; }
+  .mini-cal button:hover { background: var(--accent); color: #fff; }
+
+  /* Quick actions */
+  .quick a {
+    display: block; padding: 8px 12px; border-radius: 10px; text-decoration: none;
+    color: var(--ink); font-size: .87rem;
+  }
+  .quick a:hover { background: var(--soft); }
+  .quick .group { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 10px 0 4px; }
+
+  /* Hub gallery */
+  .hubs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .hub-tile {
+    background: var(--soft); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 14px; padding: 24px 12px 16px; text-align: center; text-decoration: none;
+    transition: transform .15s, background .15s, color .15s;
+  }
+  .hub-tile:hover { transform: translateY(-3px); background: var(--accent); color: #fff; border-color: var(--accent); }
+  .hub-tile .ico { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+  .hub-tile .lbl { font-size: .82rem; font-weight: 600; }
+
+  /* To-do */
+  .todo-item { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: .9rem; }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-item input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+  .todo-item .txt { flex: 1; }
+  .todo-item.done .txt { text-decoration: line-through; color: var(--muted); }
+  .tag { font-size: .68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--soft); color: var(--accent); white-space: nowrap; }
+  .tag.warn { background: #f7e3c8; color: var(--warn); }
+  .todo-del { border: none; background: none; color: #d8c9b0; cursor: pointer; font-size: 1.05rem; }
+  .todo-del:hover { color: #c0604f; }
+  .todo-add { display: flex; gap: 8px; margin-top: 12px; }
+  .todo-add input {
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    padding: 8px 12px; font-size: .85rem; font-family: inherit;
+  }
+  .todo-add input:first-child { flex: 2; }
+  .todo-add input.tag-input { flex: 1; }
+  .todo-add button { border: none; background: var(--accent); color: #fff; border-radius: 10px; padding: 8px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; }
+  .todo-add button:hover { filter: brightness(1.07); }
+
+  /* Progress bars */
+  .bar-row { margin-bottom: 14px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-row .lbl { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-bottom: 5px; }
+  .bar { height: 12px; background: var(--soft); border-radius: 10px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 65%, #fff), var(--accent)); border-radius: 10px; transition: width .6s; }
+
+  /* Habit tracker */
+  .habit-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .habit-row:last-of-type { border-bottom: none; }
+  .habit-row input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--good); cursor: pointer; }
+  .habit-row span { flex: 1; }
+  .habit-row.done span { color: var(--muted); text-decoration: line-through; }
+  .habit-score { margin-top: 12px; font-size: .8rem; color: var(--accent); font-weight: 700; }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; }
+  table.data { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  table.data th {
+    text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--accent); background: var(--soft); padding: 9px 10px; border-bottom: 2px solid var(--line);
+  }
+  table.data td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data tr:hover td { background: #fbf7ee; }
+  .money { font-variant-numeric: tabular-nums; }
+  .status { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .st-done { background: #e4ecd9; color: var(--good); }
+  .st-prog { background: #f7e3c8; color: var(--warn); }
+  .st-todo { background: var(--soft); color: var(--accent); }
+
+  /* Edit mode */
+  body.editing td[contenteditable] { outline: 1px dashed var(--accent); outline-offset: -3px; border-radius: 6px; min-width: 60px; cursor: text; }
+  body.editing td[contenteditable]:focus { outline-style: solid; background: #fff; }
+  .edit-only { display: none !important; }
+  body.editing .edit-only { display: revert !important; }
+  button.edit-only { display: none; }
+  body.editing button.edit-only { display: inline-block; }
+  .row-del { border: none; background: none; color: #d8c9b0; cursor: pointer; font-size: .95rem; }
+  .row-del:hover { color: #c0604f; }
+  .add-row { margin-top: 10px; border: 1px dashed var(--accent); background: none; color: var(--accent); border-radius: 10px; padding: 6px 14px; font-size: .8rem; font-weight: 600; cursor: pointer; }
+  .add-row:hover { background: var(--soft); }
+  body.editing [data-edit-text] { outline: 1px dashed var(--accent); outline-offset: 4px; border-radius: 8px; cursor: text; }
+
+  /* Hub sections */
+  section.hub { margin-top: 48px; }
+  section.hub > h2 { font-size: 1.5rem; color: var(--ink); margin-bottom: 4px; scroll-margin-top: 20px; }
+  section.hub > p.sub { color: var(--muted); font-size: .9rem; margin-bottom: 18px; font-style: italic; }
+  .hub-grid { display: grid; gap: 20px; }
+  .hub-grid.two { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .hub-grid.two { grid-template-columns: 1fr; } }
+
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 44px 0 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Account login overlay ── -->
+<div id="accountOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h1 class="serif">🎒 Scholar OS</h1>
+    <p>Who's studying today?</p>
+    <div id="accountList"></div>
+    <div class="acct-form">
+      <span class="lbl">New account</span>
+      <input id="acctName" type="text" placeholder="Your name" maxlength="20">
+      <input id="acctPin" type="password" placeholder="PIN (optional, 4 digits)" maxlength="4" inputmode="numeric">
+      <button class="btn primary" id="acctCreate">✨ Create my account</button>
+    </div>
+  </div>
+</div>
+
+<header class="banner">
+  <div class="banner-tools">
+    <button class="btn" id="accountBtn">👤</button>
+    <button class="btn" id="editToggle">✏️ Customize</button>
+    <button class="btn danger edit-only" id="resetBtn">↺ Reset all</button>
+    <button class="btn primary edit-only" id="doneBtn">✔ Done</button>
+  </div>
+  <h1 class="serif" data-edit-text="title">🎒 Scholar OS</h1>
+  <p data-edit-text="subtitle">My all-in-one hub for 6th grade ⭐</p>
+</header>
+
+<div class="wrap pull-up">
+
+  <div class="custom-bar">
+    <strong>✏️ Customize mode</strong>
+    <span class="hint">Click any cell, heading, or the quote to edit · dates as YYYY-MM-DD · everything saves automatically in your browser</span>
+    <div class="swatches" id="swatches"></div>
+  </div>
+
+  <div class="quote" data-edit-text="quote">📖 "The more that you read, the more things you will know. The more that you learn, the more places you'll go." — Dr. Seuss</div>
+
+  <div class="grid">
+    <!-- Left column -->
+    <div class="col">
+      <div class="card clock-card">
+        <h2>Time</h2>
+        <div class="clock-digits">
+          <div class="digit" id="clockH">--<small>HRS</small></div>
+          <div class="clock-colon">:</div>
+          <div class="digit" id="clockM">--<small>MIN</small></div>
+        </div>
+        <div class="clock-date" id="clockDate"></div>
+      </div>
+
+      <div class="card mini-cal">
+        <h2>Calendar</h2>
+        <div class="cal-head">
+          <button id="calPrev" aria-label="Previous month">‹</button>
+          <strong id="calTitle"></strong>
+          <button id="calNext" aria-label="Next month">›</button>
+        </div>
+        <table id="calTable"></table>
+      </div>
+
+      <div class="card quick">
+        <h2>Quick Actions</h2>
+        <div class="group">Navigate</div>
+        <a href="#hub-academics">📚 School Hub</a>
+        <a href="#hub-extracurriculars">🏅 Clubs &amp; Fun Hub</a>
+        <a href="#hub-finance">💰 Allowance Hub</a>
+        <a href="#hub-fitness">💪 Fitness Hub</a>
+      </div>
+    </div>
+
+    <!-- Center column -->
+    <div class="col">
+      <div class="card study-card">
+        <h2>🎯 Study Time</h2>
+        <p>Ready to focus? Launch FocusTown and start a study session.</p>
+        <button class="study-btn" id="studyBtn">🚀 Get Ready to Study</button>
+        <div class="study-note" id="studyNote"></div>
+      </div>
+
+      <div class="card">
+        <h2>Hubs</h2>
+        <div class="hubs">
+          <a class="hub-tile" href="#hub-academics"><span class="ico">📚</span><span class="lbl">School Hub</span></a>
+          <a class="hub-tile" href="#hub-extracurriculars"><span class="ico">🏅</span><span class="lbl">Clubs &amp; Fun</span></a>
+          <a class="hub-tile" href="#hub-finance"><span class="ico">💰</span><span class="lbl">Allowance</span></a>
+          <a class="hub-tile" href="#hub-fitness"><span class="ico">💪</span><span class="lbl">Fitness</span></a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>✅ To-Do List</h2>
+        <div id="todoList"></div>
+        <div class="todo-add">
+          <input id="todoInput" type="text" placeholder="Add a task…">
+          <input id="todoTagInput" class="tag-input" type="text" placeholder="Tag (optional)">
+          <button id="todoAddBtn">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📅 Coming Up</h2>
+        <div class="tbl-wrap"><table class="data" id="deadlineTable"></table></div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="col">
+      <div class="card">
+        <h2>Progress</h2>
+        <div id="progressBars"></div>
+      </div>
+
+      <div class="card">
+        <h2>✅ Today's Habits</h2>
+        <div id="habitList"></div>
+        <button class="add-row edit-only" id="habitAddBtn">+ Add habit</button>
+        <div class="habit-score" id="habitScore"></div>
+      </div>
+
+      <div class="card">
+        <h2>💵 Money Snapshot</h2>
+        <div id="moneySnapshot" style="font-size:.88rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Hub sections ═══ -->
+
+  <section class="hub" id="hub-academics">
+    <h2 class="serif">📚 School Hub</h2>
+    <p class="sub">Stay on top of homework and tests — you've got this!</p>
+    <div class="hub-grid two">
+      <div class="card"><h2>🏫 My Classes</h2><div class="tbl-wrap"><table class="data" id="classesTable"></table></div><button class="add-row edit-only" data-add="classes">+ Add class</button></div>
+      <div class="card"><h2>🧪 Tests &amp; Quizzes</h2><div class="tbl-wrap"><table class="data" id="examsTable"></table></div><button class="add-row edit-only" data-add="exams">+ Add test</button></div>
+    </div>
+    <div class="hub-grid" style="margin-top:20px">
+      <div class="card"><h2>📝 Homework &amp; Projects</h2><div class="tbl-wrap"><table class="data" id="assignmentsTable"></table></div><button class="add-row edit-only" data-add="assignments">+ Add assignment</button></div>
+    </div>
+  </section>
+
+  <section class="hub" id="hub-extracurriculars">
+    <h2 class="serif">🏅 Clubs &amp; Fun Hub</h2>
+    <p class="sub">Clubs, sports, and the fun stuff you do after school.</p>
+    <div class="hub-grid two">
+      <div class="card"><h2>🎭 My Activities</h2><div class="tbl-wrap"><table class="data" id="activitiesTable"></table></div><button class="add-row edit-only" data-add="activities">+ Add activity</button></div>
+      <div class="card"><h2>🤝 Helping Out Log</h2><div class="tbl-wrap"><table class="data" id="volunteerTable"></table></div><button class="add-row edit-only" data-add="volunteering">+ Add entry</button></div>
+    </div>
+  </section>
+
+  <section class="hub" id="hub-finance">
+    <h2 class="serif">💰 Allowance Hub</h2>
+    <p class="sub">Track your allowance and save up for the fun stuff!</p>
+    <div class="hub-grid two">
+      <div class="card"><h2>🧾 My Spending</h2><div class="tbl-wrap"><table class="data" id="expensesTable"></table></div><button class="add-row edit-only" data-add="expenses">+ Add expense</button></div>
+      <div class="card"><h2>🎯 Savings Goals</h2><div class="tbl-wrap"><table class="data" id="savingsTable"></table></div><button class="add-row edit-only" data-add="savings">+ Add goal</button></div>
+    </div>
+  </section>
+
+  <section class="hub" id="hub-fitness">
+    <h2 class="serif">💪 Fitness Hub</h2>
+    <p class="sub">Move your body every day — play, run, swim, dance!</p>
+    <div class="hub-grid two">
+      <div class="card"><h2>🏋️ Activities &amp; Play</h2><div class="tbl-wrap"><table class="data" id="workoutsTable"></table></div><button class="add-row edit-only" data-add="workouts">+ Add activity</button></div>
+      <div class="card"><h2>📊 Habit History</h2><div class="tbl-wrap"><table class="data" id="habitHistTable"></table></div></div>
+    </div>
+  </section>
+
+  <footer>Scholar OS — your data never leaves this browser.</footer>
+</div>
+
+<script>
+/* ═══════════ Default data (6th grade, one teacher) ═══════════ */
+const DEFAULTS = {
+  settings: {
+    title: "🎒 Scholar OS",
+    subtitle: "My all-in-one hub for 6th grade ⭐",
+    quote: "📖 \"The more that you read, the more things you will know. The more that you learn, the more places you'll go.\" — Dr. Seuss",
+    accent: "#b07d4f"
+  },
+  classes: [
+    { name: "Math", schedule: "Every day, Period 1", period: 1, grade: "A-", target: "A" },
+    { name: "English Language Arts", schedule: "Every day, Period 2", period: 2, grade: "B+", target: "A-" },
+    { name: "Science", schedule: "Every day, Period 3", period: 3, grade: "A", target: "A" },
+    { name: "Social Studies", schedule: "Every day, Period 4", period: 4, grade: "A-", target: "A" },
+    { name: "Art", schedule: "Mon/Wed, Period 5", period: 5, grade: "A", target: "A" },
+    { name: "PE", schedule: "Tue/Thu, Period 5", period: 5, grade: "A", target: "A" },
+  ],
+  assignments: [
+    { name: "Fractions practice worksheet", cls: "Math", type: "Homework", due: "2026-08-18", priority: "Medium", status: "In Progress" },
+    { name: "Book report: Holes", cls: "English Language Arts", type: "Project", due: "2026-08-24", priority: "High", status: "In Progress" },
+    { name: "Solar system poster", cls: "Science", type: "Project", due: "2026-08-21", priority: "High", status: "Not Started" },
+    { name: "Ancient Egypt quiz prep", cls: "Social Studies", type: "Study", due: "2026-08-19", priority: "Medium", status: "Not Started" },
+    { name: "Spelling list 12 practice", cls: "English Language Arts", type: "Homework", due: "2026-08-17", priority: "Low", status: "Completed" },
+  ],
+  exams: [
+    { name: "Fractions Unit Test", cls: "Math", date: "2026-08-28", topics: "Adding & multiplying fractions", score: "—" },
+    { name: "Spelling Quiz - List 12", cls: "English Language Arts", date: "2026-08-21", topics: "Spelling list 12 words", score: "—" },
+    { name: "Solar System Quiz", cls: "Science", date: "2026-09-04", topics: "Planets, orbits, phases of the moon", score: "—" },
+    { name: "Ancient Egypt Test", cls: "Social Studies", date: "2026-09-11", topics: "Pharaohs, pyramids, the Nile", score: "—" },
+  ],
+  activities: [
+    { name: "School Band", category: "Music", role: "Trumpet player", hrs: 2, achievement: "Played at the winter concert" },
+    { name: "Art Club", category: "Arts", role: "Member", hrs: 1, achievement: "Painting picked for school showcase" },
+    { name: "Soccer Team", category: "Sports", role: "Midfielder", hrs: 3, achievement: "Scored 4 goals this season" },
+    { name: "Chess Club", category: "Games", role: "Member", hrs: 1, achievement: "3rd place in school tournament" },
+    { name: "Reading Buddies", category: "Service", role: "Buddy", hrs: 1, achievement: "Read with 2nd graders every week" },
+  ],
+  volunteering: [
+    { date: "2026-08-02", org: "Animal Shelter", activity: "Walked dogs", hrs: 2 },
+    { date: "2026-08-09", org: "Public Library", activity: "Shelved books", hrs: 1 },
+  ],
+  expenses: [
+    { date: "2026-08-10", item: "Candy + slushie", category: "Snacks", amount: 4.50 },
+    { date: "2026-08-11", item: "Slime kit", category: "Toys", amount: 8.00 },
+    { date: "2026-08-12", item: "Book fair book", category: "Books", amount: 7.99 },
+    { date: "2026-08-13", item: "Ice cream with friends", category: "Snacks", amount: 5.25 },
+    { date: "2026-08-14", item: "Arcade tokens", category: "Fun", amount: 10.00 },
+  ],
+  savings: [
+    { goal: "New bike", target: 250, saved: 80, deadline: "2027-06-01" },
+    { goal: "Video game", target: 60, saved: 45, deadline: "2026-10-01" },
+    { goal: "Skateboard", target: 90, saved: 30, deadline: "2026-12-15" },
+    { goal: "Amusement park trip", target: 75, saved: 75, deadline: "2026-09-01" },
+  ],
+  workouts: [
+    { date: "2026-08-10", type: "Bike Ride", exercises: "Rode around the neighborhood", mins: 30, intensity: "Medium" },
+    { date: "2026-08-11", type: "Swimming", exercises: "Pool laps + diving", mins: 45, intensity: "High" },
+    { date: "2026-08-12", type: "Soccer Practice", exercises: "Drills + scrimmage", mins: 60, intensity: "High" },
+    { date: "2026-08-14", type: "Playground", exercises: "Monkey bars, tag, climbing", mins: 40, intensity: "Medium" },
+  ],
+  todos: [
+    { txt: "Return my library book", tag: "School", done: false },
+    { txt: "Ask mom to sign field trip slip", tag: "School", done: false },
+    { txt: "Practice trumpet 20 minutes", tag: "Band", done: false },
+  ],
+  habits: ["😴 In bed by 9pm", "📖 Read 20 min", "🎒 Pack my backpack", "🍎 Eat fruits & veggies", "📵 Screens off before bed", "🦷 Brush teeth 2×"],
+  habitDays: {
+    "2026-08-10": [true, true, true, false, true, true],
+    "2026-08-11": [true, true, false, true, true, false],
+    "2026-08-12": [false, true, true, true, false, true],
+    "2026-08-13": [true, false, true, true, true, true],
+    "2026-08-14": [true, true, true, true, true, true],
+  },
+};
+
+/* ═══════════ Helpers ═══════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtDate = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso)
+  ? new Date(iso + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  : esc(iso);
+const money = n => "$" + (parseFloat(n) || 0).toFixed(2);
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/* ═══════════ Accounts ═══════════ */
+const ACC_KEY = "scholaros.g6.accounts";
+const CUR_KEY = "scholaros.g6.current";
+const LEGACY_KEY = "scholaros.grade6.v1";
+const dataKey = name => "scholaros.g6.data." + name;
+let S = null;
+
+const getAccounts = () => { try { return JSON.parse(localStorage.getItem(ACC_KEY)) || []; } catch { return []; } };
+const setAccounts = a => localStorage.setItem(ACC_KEY, JSON.stringify(a));
+const currentAccount = () => localStorage.getItem(CUR_KEY);
+
+function loadState(name) {
+  try { S = JSON.parse(localStorage.getItem(dataKey(name))); } catch { S = null; }
+  if (!S) {
+    // First login on this account: adopt any pre-accounts data, else start fresh
+    try { S = JSON.parse(localStorage.getItem(LEGACY_KEY)); } catch { S = null; }
+    if (!S) S = JSON.parse(JSON.stringify(DEFAULTS));
+    save();
+  }
+}
+function save() { if (S) localStorage.setItem(dataKey(currentAccount()), JSON.stringify(S)); }
+
+function renderAccountList() {
+  const accts = getAccounts();
+  $("accountList").innerHTML = accts.length
+    ? accts.map(a => `
+      <button class="acct-chip" data-login="${esc(a.name)}">
+        <span class="avatar">${esc(a.name.trim()[0]?.toUpperCase() || "?")}</span>
+        <span class="name">${esc(a.name)}${a.pin ? " 🔒" : ""}</span>
+        <span class="acct-del" data-del-acct="${esc(a.name)}" title="Delete account">×</span>
+      </button>`).join("")
+    : `<p style="color:var(--muted);font-size:.88rem;margin-bottom:6px">No accounts yet — create one below!</p>`;
+}
+
+function showOverlay() {
+  renderAccountList();
+  $("accountOverlay").classList.remove("hidden");
+}
+function hideOverlay() { $("accountOverlay").classList.add("hidden"); }
+
+function login(name, skipPin) {
+  const acct = getAccounts().find(a => a.name === name);
+  if (!acct) return;
+  if (acct.pin && !skipPin) {
+    const entered = prompt(`Enter the PIN for ${name}:`);
+    if (entered === null) return;
+    if (entered !== acct.pin) { alert("Wrong PIN — try again!"); return; }
+  }
+  localStorage.setItem(CUR_KEY, name);
+  loadState(name);
+  hideOverlay();
+  $("accountBtn").textContent = `👤 ${name}`;
+  setEditing(false);
+  renderAll();
+}
+
+function logout() {
+  localStorage.removeItem(CUR_KEY);
+  S = null;
+  showOverlay();
+}
+
+$("acctCreate").onclick = () => {
+  const name = $("acctName").value.trim();
+  const pin = $("acctPin").value.trim();
+  if (!name) { alert("Type your name first!"); return; }
+  if (pin && !/^\d{4}$/.test(pin)) { alert("PIN must be exactly 4 digits (or leave it blank)."); return; }
+  const accts = getAccounts();
+  if (accts.some(a => a.name.toLowerCase() === name.toLowerCase())) { alert("That name is taken — try another!"); return; }
+  accts.push({ name, pin: pin || null });
+  setAccounts(accts);
+  $("acctName").value = ""; $("acctPin").value = "";
+  login(name, true);
+};
+$("acctName").addEventListener("keydown", e => { if (e.key === "Enter") $("acctCreate").click(); });
+$("acctPin").addEventListener("keydown", e => { if (e.key === "Enter") $("acctCreate").click(); });
+
+$("accountList").addEventListener("click", e => {
+  const del = e.target.closest("[data-del-acct]");
+  if (del) {
+    e.stopPropagation();
+    const name = del.dataset.delAcct;
+    if (confirm(`Delete the account "${name}" and all its data?`)) {
+      setAccounts(getAccounts().filter(a => a.name !== name));
+      localStorage.removeItem(dataKey(name));
+      renderAccountList();
+    }
+    return;
+  }
+  const chip = e.target.closest("[data-login]");
+  if (chip) login(chip.dataset.login, false);
+});
+
+$("accountBtn").onclick = () => { if (confirm("Switch account / log out?")) logout(); };
+
+/* ═══════════ Get Ready to Study → FocusTown ═══════════ */
+$("studyBtn").onclick = () => {
+  const note = $("studyNote");
+  note.textContent = "Opening FocusTown…";
+  let launched = false;
+  const onHide = () => { launched = true; };
+  document.addEventListener("visibilitychange", onHide, { once: true });
+  window.addEventListener("blur", () => { launched = true; }, { once: true });
+
+  // Try the app's custom URL scheme (browsers will ask to allow opening the app)
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.src = "focustown://";
+  document.body.appendChild(frame);
+
+  setTimeout(() => {
+    frame.remove();
+    note.textContent = launched
+      ? "Have a great study session! 📚"
+      : "Couldn't open FocusTown — check that the app is installed, then click again and choose \"Allow\".";
+    setTimeout(() => { note.textContent = ""; }, 6000);
+  }, 1800);
+};
+
+/* ═══════════ Formatters ═══════════ */
+const FMT = {
+  text: v => esc(v),
+  bold: v => `<strong>${esc(v)}</strong>`,
+  date: v => fmtDate(v),
+  money: v => `<span class="money">${money(v)}</span>`,
+  status: v => {
+    const cls = /complete|done/i.test(v) ? "st-done" : /progress/i.test(v) ? "st-prog" : "st-todo";
+    return `<span class="status ${cls}">${esc(v)}</span>`;
+  },
+  prio: v => v === "High" ? `<span class="tag warn">High</span>` : esc(v),
+  savingsBar: (v, row) => {
+    const p = Math.min(100, ((parseFloat(row.saved) || 0) / (parseFloat(row.target) || 1)) * 100);
+    return `<div class="bar" style="min-width:90px"><i style="width:${p}%"></i></div>`;
+  },
+};
+
+/* ═══════════ Editable table engine ═══════════ */
+let editing = false;
+const TABLES = {
+  classes:      { el: "classesTable",      cols: [["Class","name","text"],["Schedule","schedule","text"],["Period","period","text"],["Grade","grade","bold"],["Goal","target","text"]] },
+  assignments:  { el: "assignmentsTable",  cols: [["Assignment","name","text"],["Class","cls","text"],["Type","type","text"],["Due","due","date"],["Priority","priority","prio"],["Status","status","status"]] },
+  exams:        { el: "examsTable",        cols: [["Test / Quiz","name","text"],["Class","cls","text"],["Date","date","date"],["What to Study","topics","text"],["Score","score","text"]] },
+  activities:   { el: "activitiesTable",   cols: [["Activity","name","text"],["Category","category","text"],["Role","role","text"],["Hrs/Wk","hrs","text"],["Proud Moment","achievement","text"]] },
+  volunteering: { el: "volunteerTable",    cols: [["Date","date","date"],["Place","org","text"],["What I Did","activity","text"],["Hours","hrs","text"]] },
+  expenses:     { el: "expensesTable",     cols: [["Date","date","date"],["Item","item","text"],["Category","category","text"],["Amount","amount","money"]] },
+  savings:      { el: "savingsTable",      cols: [["Goal","goal","text"],["Target","target","money"],["Saved","saved","money"],["Want it by","deadline","date"],["Progress","_bar","savingsBar"]] },
+  workouts:     { el: "workoutsTable",     cols: [["Date","date","date"],["Activity","type","text"],["What I Did","exercises","text"],["Min","mins","text"],["Energy","intensity","text"]] },
+};
+
+function renderTables() {
+  for (const [key, cfg] of Object.entries(TABLES)) {
+    const rows = S[key];
+    const editCols = cfg.cols.filter(c => c[1] !== "_bar");
+    const cols = editing ? editCols : cfg.cols;
+    let html = "<thead><tr>" + cols.map(c => `<th>${c[0]}</th>`).join("")
+      + (editing ? "<th></th>" : "") + "</tr></thead><tbody>";
+    html += rows.map((row, r) => "<tr>" + cols.map(([, field, fmt]) => {
+      if (editing) return `<td contenteditable data-t="${key}" data-r="${r}" data-f="${field}">${esc(row[field])}</td>`;
+      return `<td>${FMT[fmt](row[field], row)}</td>`;
+    }).join("") + (editing
+      ? `<td><button class="row-del" data-del-t="${key}" data-del-r="${r}" aria-label="Delete row">×</button></td>` : "")
+      + "</tr>").join("");
+    $(cfg.el).innerHTML = html + "</tbody>";
+  }
+}
+
+/* Cell edit → state */
+document.addEventListener("input", e => {
+  if (!S) return;
+  const td = e.target.closest("td[contenteditable][data-t]");
+  if (td) {
+    const { t, r, f } = td.dataset;
+    let v = td.innerText.trim();
+    if (["amount", "target", "saved", "hrs", "mins", "period"].includes(f)) v = parseFloat(v) || 0;
+    S[t][+r][f] = v;
+    save(); renderDerived();
+    return;
+  }
+  const el = e.target.closest("[data-edit-text]");
+  if (el) { S.settings[el.dataset.editText] = el.innerText.trim(); save(); }
+});
+
+/* Delete row + add row */
+document.addEventListener("click", e => {
+  if (!S) return;
+  const del = e.target.closest("[data-del-t]");
+  if (del) { S[del.dataset.delT].splice(+del.dataset.delR, 1); save(); renderTables(); renderDerived(); return; }
+  const add = e.target.closest("[data-add]");
+  if (add) {
+    const key = add.dataset.add;
+    const blank = {};
+    TABLES[key].cols.forEach(([, f]) => { if (f !== "_bar") blank[f] = ""; });
+    S[key].push(blank); save(); renderTables();
+  }
+});
+
+/* ═══════════ Text blocks (title / quote) ═══════════ */
+function renderTexts() {
+  document.querySelectorAll("[data-edit-text]").forEach(el => {
+    const key = el.dataset.editText;
+    if (document.activeElement !== el) el.textContent = S.settings[key];
+    el.contentEditable = editing ? "true" : "false";
+  });
+  document.title = S.settings.title.replace(/^\S+\s/, "") + " — My 6th Grade Dashboard";
+}
+
+/* ═══════════ Accent swatches ═══════════ */
+const ACCENTS = [
+  ["Caramel", "#b07d4f"], ["Sage", "#7d8f69"], ["Dusty Rose", "#c48b8b"],
+  ["Mocha", "#6f5340"], ["Butter", "#c9a227"], ["Denim", "#7a93ad"],
+];
+function renderSwatches() {
+  $("swatches").innerHTML = "<span style='font-size:.78rem;color:var(--muted)'>Accent:</span>" +
+    ACCENTS.map(([name, hex]) =>
+      `<div class="swatch ${S.settings.accent === hex ? "active" : ""}" style="background:${hex}" title="${name}" data-accent="${hex}"></div>`
+    ).join("");
+  document.documentElement.style.setProperty("--accent", S.settings.accent);
+}
+$("swatches").addEventListener("click", e => {
+  const sw = e.target.closest("[data-accent]");
+  if (!sw || !S) return;
+  S.settings.accent = sw.dataset.accent; save(); renderSwatches();
+});
+
+/* ═══════════ Edit mode toggle ═══════════ */
+function setEditing(v) {
+  editing = v;
+  document.body.classList.toggle("editing", v);
+  $("editToggle").style.display = v ? "none" : "";
+  if (!S) return;
+  renderTables(); renderTexts(); renderHabits();
+}
+$("editToggle").onclick = () => setEditing(true);
+$("doneBtn").onclick = () => setEditing(false);
+$("resetBtn").onclick = () => {
+  if (confirm("Reset everything back to the sample data? Your edits will be lost.")) {
+    S = JSON.parse(JSON.stringify(DEFAULTS));
+    save(); renderAll();
+  }
+};
+
+/* ═══════════ Clock ═══════════ */
+function tickClock() {
+  const n = new Date();
+  const h = n.getHours(), h12 = ((h + 11) % 12) + 1;
+  $("clockH").innerHTML = String(h12).padStart(2, "0") + `<small>${h < 12 ? "AM" : "PM"}</small>`;
+  $("clockM").innerHTML = String(n.getMinutes()).padStart(2, "0") + "<small>MIN</small>";
+  $("clockDate").textContent = n.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+tickClock(); setInterval(tickClock, 1000);
+
+/* ═══════════ Mini calendar ═══════════ */
+let calCursor = new Date(); calCursor.setDate(1);
+function renderCal() {
+  const eventDays = new Set([
+    ...S.assignments.map(a => a.due), ...S.exams.map(e => e.date),
+  ]);
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  $("calTitle").textContent = calCursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const first = new Date(y, m, 1).getDay();
+  const days = new Date(y, m + 1, 0).getDate();
+  const today = new Date();
+  let html = "<tr>" + ["S", "M", "T", "W", "T", "F", "S"].map(d => `<th>${d}</th>`).join("") + "</tr><tr>";
+  for (let i = 0; i < first; i++) html += "<td></td>";
+  for (let d = 1; d <= days; d++) {
+    if ((first + d - 1) % 7 === 0 && d > 1) html += "</tr><tr>";
+    const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+    html += `<td class="${isToday ? "today" : eventDays.has(iso) ? "has-event" : ""}">${d}</td>`;
+  }
+  $("calTable").innerHTML = html + "</tr>";
+}
+$("calPrev").onclick = () => { calCursor.setMonth(calCursor.getMonth() - 1); renderCal(); };
+$("calNext").onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderCal(); };
+
+/* ═══════════ Progress bars (year / month / week / day) ═══════════ */
+function renderProgress() {
+  const n = new Date();
+  const yrStart = new Date(n.getFullYear(), 0, 1), yrEnd = new Date(n.getFullYear() + 1, 0, 1);
+  const moStart = new Date(n.getFullYear(), n.getMonth(), 1), moEnd = new Date(n.getFullYear(), n.getMonth() + 1, 1);
+  const dayStart = new Date(n); dayStart.setHours(0, 0, 0, 0);
+  const wkStart = new Date(dayStart); wkStart.setDate(wkStart.getDate() - wkStart.getDay());
+  const pct = (a, b) => Math.min(100, Math.max(0, ((n - a) / (b - a)) * 100));
+  $("progressBars").innerHTML = [["Year", pct(yrStart, yrEnd)], ["Month", pct(moStart, moEnd)],
+    ["Week", pct(wkStart, +wkStart + 7 * 864e5)], ["Day", pct(dayStart, +dayStart + 864e5)]]
+    .map(([l, p]) => `<div class="bar-row"><div class="lbl"><span>${l}</span><span>${p.toFixed(0)}%</span></div><div class="bar"><i style="width:${p}%"></i></div></div>`).join("");
+}
+renderProgress(); setInterval(renderProgress, 60000);
+
+/* ═══════════ To-do list (unlimited — add as many as you want!) ═══════════ */
+function renderTodos() {
+  $("todoList").innerHTML = S.todos.map((t, i) => `
+    <div class="todo-item ${t.done ? "done" : ""}">
+      <input type="checkbox" ${t.done ? "checked" : ""} data-todo-check="${i}">
+      <span class="txt">${esc(t.txt)}</span>
+      ${t.tag ? `<span class="tag">${esc(t.tag)}</span>` : ""}
+      <button class="todo-del" data-todo-del="${i}" aria-label="Delete">×</button>
+    </div>`).join("") || `<p style="color:var(--muted);font-size:.85rem">All clear. Add your next task below.</p>`;
+}
+$("todoList").addEventListener("change", e => {
+  const cb = e.target.closest("[data-todo-check]");
+  if (cb) { S.todos[+cb.dataset.todoCheck].done = cb.checked; save(); renderTodos(); }
+});
+$("todoList").addEventListener("click", e => {
+  const del = e.target.closest("[data-todo-del]");
+  if (del) { S.todos.splice(+del.dataset.todoDel, 1); save(); renderTodos(); }
+});
+function addTodo() {
+  const v = $("todoInput").value.trim();
+  if (!v) return;
+  S.todos.push({ txt: v, tag: $("todoTagInput").value.trim(), done: false });
+  $("todoInput").value = ""; $("todoTagInput").value = "";
+  save(); renderTodos();
+}
+$("todoAddBtn").onclick = addTodo;
+$("todoInput").addEventListener("keydown", e => { if (e.key === "Enter") addTodo(); });
+$("todoTagInput").addEventListener("keydown", e => { if (e.key === "Enter") addTodo(); });
+
+/* ═══════════ Habits ═══════════ */
+function todayHabits() {
+  const key = todayISO();
+  if (!S.habitDays[key]) S.habitDays[key] = S.habits.map(() => false);
+  return S.habitDays[key];
+}
+function renderHabits() {
+  const state = todayHabits();
+  $("habitList").innerHTML = S.habits.map((h, i) => `
+    <label class="habit-row ${state[i] ? "done" : ""}">
+      <input type="checkbox" ${state[i] ? "checked" : ""} data-habit="${i}">
+      ${editing
+        ? `<span contenteditable data-habit-name="${i}">${esc(h)}</span><button class="row-del" data-habit-del="${i}">×</button>`
+        : `<span>${esc(h)}</span>`}
+    </label>`).join("");
+  const done = state.filter(Boolean).length;
+  $("habitScore").textContent = `Today's score: ${done}/${S.habits.length}`;
+}
+$("habitList").addEventListener("change", e => {
+  const cb = e.target.closest("[data-habit]");
+  if (!cb) return;
+  todayHabits()[+cb.dataset.habit] = cb.checked;
+  save(); renderHabits(); renderHabitHistory();
+});
+$("habitList").addEventListener("input", e => {
+  const el = e.target.closest("[data-habit-name]");
+  if (el) { S.habits[+el.dataset.habitName] = el.innerText.trim(); save(); }
+});
+$("habitList").addEventListener("click", e => {
+  const del = e.target.closest("[data-habit-del]");
+  if (!del) return;
+  const i = +del.dataset.habitDel;
+  S.habits.splice(i, 1);
+  Object.values(S.habitDays).forEach(day => day.splice(i, 1));
+  save(); renderHabits(); renderHabitHistory();
+});
+$("habitAddBtn").onclick = () => {
+  S.habits.push("✨ New habit");
+  Object.values(S.habitDays).forEach(day => day.push(false));
+  save(); renderHabits(); renderHabitHistory();
+};
+function renderHabitHistory() {
+  const days = Object.keys(S.habitDays).sort().slice(-7).reverse();
+  $("habitHistTable").innerHTML = "<thead><tr><th>Date</th><th>Score</th></tr></thead><tbody>" +
+    days.map(d => {
+      const done = S.habitDays[d].filter(Boolean).length;
+      return `<tr><td>${fmtDate(d)}</td><td><strong>${done}/${S.habitDays[d].length}</strong></td></tr>`;
+    }).join("") + "</tbody>";
+}
+
+/* ═══════════ Derived views ═══════════ */
+function renderDerived() {
+  const deadlines = [
+    ...S.assignments.filter(a => a.status !== "Completed").map(a => ({ what: a.name, where: a.cls, due: a.due })),
+    ...S.exams.map(e => ({ what: e.name, where: e.cls, due: e.date })),
+  ].filter(d => d.due).sort((a, b) => String(a.due).localeCompare(String(b.due))).slice(0, 10);
+  $("deadlineTable").innerHTML = "<thead><tr><th>What</th><th>Class</th><th>Due</th></tr></thead><tbody>" +
+    deadlines.map(d => `<tr><td>${esc(d.what)}</td><td>${esc(d.where)}</td><td>${fmtDate(d.due)}</td></tr>`).join("") + "</tbody>";
+
+  const spent = S.expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const savedTotal = S.savings.reduce((s, g) => s + (parseFloat(g.saved) || 0), 0);
+  const volHrs = S.volunteering.reduce((s, v) => s + (parseFloat(v.hrs) || 0), 0);
+  $("moneySnapshot").innerHTML = `
+    <div class="bar-row"><div class="lbl"><span>Total spent (logged)</span><strong class="money">${money(spent)}</strong></div></div>
+    <div class="bar-row"><div class="lbl"><span>Total saved</span><strong class="money">${money(savedTotal)}</strong></div></div>
+    <div class="bar-row"><div class="lbl"><span>Helping-out hours</span><strong>${volHrs}h</strong></div></div>`;
+  renderCal();
+}
+
+/* ═══════════ Boot ═══════════ */
+function renderAll() {
+  renderTexts(); renderSwatches(); renderTables(); renderTodos();
+  renderHabits(); renderHabitHistory(); renderDerived();
+}
+(function boot() {
+  const cur = currentAccount();
+  if (cur && getAccounts().some(a => a.name === cur)) {
+    login(cur, true);
+  } else {
+    showOverlay();
+  }
+})();
+</script>
+</body>
+</html>
