@@ -243,6 +243,11 @@
   table.data td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
   table.data tr:last-child td { border-bottom: none; }
   table.data tr:hover td { background: #fbf7ee; }
+  table.data tr.group-row td {
+    background: var(--soft); color: var(--accent); font-weight: 700;
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+  }
+  table.data tr.group-row:hover td { background: var(--soft); }
   .money { font-variant-numeric: tabular-nums; }
   .status { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
   .st-done { background: #e4ecd9; color: var(--good); }
@@ -454,12 +459,15 @@ const DEFAULTS = {
     accent: "#b07d4f"
   },
   classes: [
-    { name: "Math", schedule: "Every day, Period 1", period: 1, grade: "A-", target: "A" },
-    { name: "English Language Arts", schedule: "Every day, Period 2", period: 2, grade: "B+", target: "A-" },
-    { name: "Science", schedule: "Every day, Period 3", period: 3, grade: "A", target: "A" },
-    { name: "Social Studies", schedule: "Every day, Period 4", period: 4, grade: "A-", target: "A" },
-    { name: "Art", schedule: "Mon/Wed, Period 5", period: 5, grade: "A", target: "A" },
-    { name: "PE", schedule: "Tue/Thu, Period 5", period: 5, grade: "A", target: "A" },
+    { name: "Math", program: "Main (school)", schedule: "Every day, Period 1", period: 1, grade: "A-", target: "A" },
+    { name: "English Language Arts", program: "Main (school)", schedule: "Every day, Period 2", period: 2, grade: "B+", target: "A-" },
+    { name: "Science", program: "Main (school)", schedule: "Every day, Period 3", period: 3, grade: "A", target: "A" },
+    { name: "Social Studies", program: "Main (school)", schedule: "Every day, Period 4", period: 4, grade: "A-", target: "A" },
+    { name: "Art", program: "Main (school)", schedule: "Mon/Wed, Period 5", period: 5, grade: "A", target: "A" },
+    { name: "PE", program: "Main (school)", schedule: "Tue/Thu, Period 5", period: 5, grade: "A", target: "A" },
+    { name: "Python Basics", program: "Coding", schedule: "Sat 10:00, online", period: "—", grade: "—", target: "Finish level 3" },
+    { name: "Scratch Projects", program: "Coding", schedule: "Sun 11:00, online", period: "—", grade: "—", target: "Build a game" },
+    { name: "Kumon Math", program: "Kumon", schedule: "Tue/Fri 4:30, center", period: "—", grade: "Level G", target: "Level H" },
   ],
   assignments: [
     { name: "Fractions practice worksheet", cls: "Math", type: "Homework", due: "2026-08-18", priority: "Medium", status: "In Progress" },
@@ -467,6 +475,8 @@ const DEFAULTS = {
     { name: "Solar system poster", cls: "Science", type: "Project", due: "2026-08-21", priority: "High", status: "Not Started" },
     { name: "Ancient Egypt quiz prep", cls: "Social Studies", type: "Study", due: "2026-08-19", priority: "Medium", status: "Not Started" },
     { name: "Spelling list 12 practice", cls: "English Language Arts", type: "Homework", due: "2026-08-17", priority: "Low", status: "Completed" },
+    { name: "Kumon worksheet packet", cls: "Kumon Math", type: "Homework", due: "2026-08-19", priority: "Medium", status: "In Progress" },
+    { name: "Scratch maze game", cls: "Python Basics", type: "Project", due: "2026-08-23", priority: "Medium", status: "Not Started" },
   ],
   exams: [
     { name: "Fractions Unit Test", cls: "Math", date: "2026-08-28", topics: "Adding & multiplying fractions", score: "—" },
@@ -548,6 +558,11 @@ function loadState(name) {
     // First login on this account: adopt any pre-accounts data, else start fresh
     try { S = JSON.parse(localStorage.getItem(LEGACY_KEY)); } catch { S = null; }
     if (!S) S = JSON.parse(JSON.stringify(DEFAULTS));
+    save();
+  }
+  // Migration: classes saved before programs existed default to school
+  if (S.classes && S.classes.some(c => c.program === undefined)) {
+    S.classes.forEach(c => { if (c.program === undefined) c.program = "Main (school)"; });
     save();
   }
 }
@@ -670,7 +685,7 @@ const FMT = {
 /* ═══════════ Editable table engine ═══════════ */
 let editing = false;
 const TABLES = {
-  classes:      { el: "classesTable",      cols: [["Class","name","text"],["Schedule","schedule","text"],["Period","period","text"],["Grade","grade","bold"],["Goal","target","text"]] },
+  classes:      { el: "classesTable",      groupBy: "program", cols: [["Class","name","text"],["Schedule","schedule","text"],["Period","period","text"],["Grade","grade","bold"],["Goal","target","text"],["Program","program","text"]] },
   assignments:  { el: "assignmentsTable",  cols: [["Assignment","name","text"],["Class","cls","text"],["Type","type","text"],["Due","due","date"],["Priority","priority","prio"],["Status","status","status"]] },
   exams:        { el: "examsTable",        cols: [["Test / Quiz","name","text"],["Class","cls","text"],["Date","date","date"],["What to Study","topics","text"],["Score","score","text"]] },
   activities:   { el: "activitiesTable",   cols: [["Activity","name","text"],["Category","category","text"],["Role","role","text"],["Hrs/Wk","hrs","text"],["Proud Moment","achievement","text"]] },
@@ -683,16 +698,30 @@ const TABLES = {
 function renderTables() {
   for (const [key, cfg] of Object.entries(TABLES)) {
     const rows = S[key];
-    const editCols = cfg.cols.filter(c => c[1] !== "_bar");
-    const cols = editing ? editCols : cfg.cols;
+    // View mode on a grouped table: hide the group column, show group header rows
+    const cols = (!editing && cfg.groupBy) ? cfg.cols.filter(c => c[1] !== cfg.groupBy && c[1] !== "_bar")
+      : editing ? cfg.cols.filter(c => c[1] !== "_bar") : cfg.cols;
     let html = "<thead><tr>" + cols.map(c => `<th>${c[0]}</th>`).join("")
       + (editing ? "<th></th>" : "") + "</tr></thead><tbody>";
-    html += rows.map((row, r) => "<tr>" + cols.map(([, field, fmt]) => {
-      if (editing) return `<td contenteditable data-t="${key}" data-r="${r}" data-f="${field}">${esc(row[field])}</td>`;
-      return `<td>${FMT[fmt](row[field], row)}</td>`;
-    }).join("") + (editing
-      ? `<td><button class="row-del" data-del-t="${key}" data-del-r="${r}" aria-label="Delete row">×</button></td>` : "")
-      + "</tr>").join("");
+    if (!editing && cfg.groupBy) {
+      const groups = {};
+      rows.forEach((row, r) => {
+        const g = row[cfg.groupBy] || "Other";
+        (groups[g] = groups[g] || []).push([row, r]);
+      });
+      for (const [g, members] of Object.entries(groups)) {
+        html += `<tr class="group-row"><td colspan="${cols.length}">${esc(g)}</td></tr>`;
+        html += members.map(([row]) => "<tr>" + cols.map(([, field, fmt]) =>
+          `<td>${FMT[fmt](row[field], row)}</td>`).join("") + "</tr>").join("");
+      }
+    } else {
+      html += rows.map((row, r) => "<tr>" + cols.map(([, field, fmt]) => {
+        if (editing) return `<td contenteditable data-t="${key}" data-r="${r}" data-f="${field}">${esc(row[field])}</td>`;
+        return `<td>${FMT[fmt](row[field], row)}</td>`;
+      }).join("") + (editing
+        ? `<td><button class="row-del" data-del-t="${key}" data-del-r="${r}" aria-label="Delete row">×</button></td>` : "")
+        + "</tr>").join("");
+    }
     $(cfg.el).innerHTML = html + "</tbody>";
   }
 }
