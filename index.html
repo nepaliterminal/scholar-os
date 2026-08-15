@@ -106,6 +106,37 @@
   .study-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
   .study-note { margin-top: 10px; font-size: .75rem; color: var(--muted); min-height: 1em; }
 
+  /* ── Stars & rewards ────────────────── */
+  .stars-balance { font-family: "Fraunces", Georgia, serif; font-size: 2.1rem; font-weight: 700; color: var(--accent); }
+  .stars-sub { font-size: .8rem; color: var(--muted); font-family: sans-serif; font-weight: 400; }
+  .stars-hint { font-size: .72rem; color: var(--muted); margin: 4px 0 12px; }
+  .reward-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .reward-row:last-of-type { border-bottom: none; }
+  .reward-name { flex: 1; }
+  .reward-cost { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .redeem-btn {
+    border: none; background: var(--accent); color: #fff; border-radius: 20px;
+    padding: 5px 14px; font-size: .8rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .redeem-btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .redeem-btn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+
+  /* ── Countdown ──────────────────────── */
+  .countdown-card { text-align: center; }
+  .countdown-num { font-size: 3.4rem; font-weight: 700; color: var(--accent); line-height: 1.15; }
+  .countdown-sub { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Avatar popover ─────────────────── */
+  .avatar-pop {
+    position: fixed; top: 64px; right: 18px; z-index: 60;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px; box-shadow: 0 10px 30px rgba(74,63,48,.18);
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 268px;
+  }
+  .avatar-pop.hidden { display: none; }
+  .avatar-pop button { border: 1px solid var(--line); background: var(--soft); border-radius: 10px; font-size: 1.3rem; padding: 6px 0; cursor: pointer; }
+  .avatar-pop button:hover { border-color: var(--accent); transform: scale(1.1); }
+
   /* ── Account overlay ────────────────── */
   .overlay {
     position: fixed; inset: 0; z-index: 50;
@@ -132,7 +163,7 @@
   .acct-chip .avatar {
     width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; flex-shrink: 0;
+    font-weight: 700; flex-shrink: 0; font-size: 1.1rem;
   }
   .acct-chip .name { flex: 1; }
   .acct-del { border: none; background: none; color: #d8c9b0; cursor: pointer; font-size: 1.1rem; padding: 4px; }
@@ -225,7 +256,7 @@
   .bar { height: 12px; background: var(--soft); border-radius: 10px; overflow: hidden; }
   .bar i { display: block; height: 100%; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 65%, #fff), var(--accent)); border-radius: 10px; transition: width .6s; }
 
-  /* Habit tracker */
+  /* Habit tracker + backpack */
   .habit-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
   .habit-row:last-of-type { border-bottom: none; }
   .habit-row input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--good); cursor: pointer; }
@@ -257,6 +288,7 @@
   /* Edit mode */
   body.editing td[contenteditable] { outline: 1px dashed var(--accent); outline-offset: -3px; border-radius: 6px; min-width: 60px; cursor: text; }
   body.editing td[contenteditable]:focus { outline-style: solid; background: #fff; }
+  body.editing [contenteditable]:not(td) { outline: 1px dashed var(--accent); outline-offset: 3px; border-radius: 6px; }
   .edit-only { display: none !important; }
   body.editing .edit-only { display: revert !important; }
   button.edit-only { display: none; }
@@ -295,6 +327,9 @@
   </div>
 </div>
 
+<!-- ── Avatar picker popover ── -->
+<div id="avatarPop" class="avatar-pop hidden"></div>
+
 <header class="banner">
   <div class="banner-tools">
     <button class="btn" id="accountBtn">👤</button>
@@ -312,6 +347,7 @@
     <strong>✏️ Customize mode</strong>
     <span class="hint">Click any cell, heading, or the quote to edit · dates as YYYY-MM-DD · everything saves automatically in your browser</span>
     <div class="swatches" id="swatches"></div>
+    <button class="btn" id="avatarBtn">🙂 Change avatar</button>
   </div>
 
   <div class="quote" data-edit-text="quote">📖 "The more that you read, the more things you will know. The more that you learn, the more places you'll go." — Dr. Seuss</div>
@@ -358,6 +394,15 @@
         <div class="study-note" id="studyNote"></div>
       </div>
 
+      <div class="card" id="starsCard">
+        <h2>⭐ My Stars &amp; Rewards</h2>
+        <div class="stars-balance"><span id="starsCount">0</span> ⭐ <span class="stars-sub">earned</span></div>
+        <div class="stars-hint">Earn stars: finish a to-do (+2) · check off every habit (+5) · mark homework "Completed" (+5)</div>
+        <div id="rewardsList"></div>
+        <button class="add-row edit-only" id="rewardAddBtn">+ Add reward</button>
+        <div class="study-note" id="starNote"></div>
+      </div>
+
       <div class="card">
         <h2>Hubs</h2>
         <div class="hubs">
@@ -386,6 +431,13 @@
 
     <!-- Right column -->
     <div class="col">
+      <div class="card countdown-card">
+        <h2>🏫 Back to School</h2>
+        <div class="countdown-num serif" id="countdownDays">—</div>
+        <div class="countdown-sub" id="countdownSub"></div>
+        <div class="edit-only" style="margin-top:10px;font-size:.78rem;color:var(--muted)">First day: <span data-edit-text="schoolStart">2026-08-24</span> (YYYY-MM-DD)</div>
+      </div>
+
       <div class="card">
         <h2>Progress</h2>
         <div id="progressBars"></div>
@@ -396,6 +448,13 @@
         <div id="habitList"></div>
         <button class="add-row edit-only" id="habitAddBtn">+ Add habit</button>
         <div class="habit-score" id="habitScore"></div>
+      </div>
+
+      <div class="card">
+        <h2>🎒 Backpack Check</h2>
+        <div id="backpackList"></div>
+        <button class="add-row edit-only" id="backpackAddBtn">+ Add item</button>
+        <div class="habit-score" id="backpackScore"></div>
       </div>
 
       <div class="card">
@@ -456,7 +515,8 @@ const DEFAULTS = {
     title: "🎒 Scholar OS",
     subtitle: "My all-in-one hub for 6th grade ⭐",
     quote: "📖 \"The more that you read, the more things you will know. The more that you learn, the more places you'll go.\" — Dr. Seuss",
-    accent: "#b07d4f"
+    accent: "#b07d4f",
+    schoolStart: "2026-08-24"
   },
   classes: [
     { name: "Math", program: "Main (school)", schedule: "Every day, Period 1", period: 1, grade: "A-", target: "A" },
@@ -527,6 +587,16 @@ const DEFAULTS = {
     "2026-08-13": [true, false, true, true, true, true],
     "2026-08-14": [true, true, true, true, true, true],
   },
+  stars: 0,
+  starredDays: {},
+  rewards: [
+    { name: "30 min extra screen time", cost: 10 },
+    { name: "Pick what's for dessert", cost: 15 },
+    { name: "Movie night — your pick", cost: 30 },
+    { name: "$5 toward a toy or game", cost: 40 },
+  ],
+  backpack: ["📚 Homework folder", "📖 Library book", "🥪 Lunchbox", "👟 Gym shoes", "✏️ Pencil case", "💧 Water bottle"],
+  backpackDays: {},
 };
 
 /* ═══════════ Helpers ═══════════ */
@@ -536,10 +606,8 @@ const fmtDate = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso)
   ? new Date(iso + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
   : esc(iso);
 const money = n => "$" + (parseFloat(n) || 0).toFixed(2);
-const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayISO = () => isoOf(new Date());
 
 /* ═══════════ Accounts ═══════════ */
 const ACC_KEY = "scholaros.g6.accounts";
@@ -551,6 +619,7 @@ let S = null;
 const getAccounts = () => { try { return JSON.parse(localStorage.getItem(ACC_KEY)) || []; } catch { return []; } };
 const setAccounts = a => localStorage.setItem(ACC_KEY, JSON.stringify(a));
 const currentAccount = () => localStorage.getItem(CUR_KEY);
+const getAccount = name => getAccounts().find(a => a.name === name);
 
 function loadState(name) {
   try { S = JSON.parse(localStorage.getItem(dataKey(name))); } catch { S = null; }
@@ -558,13 +627,16 @@ function loadState(name) {
     // First login on this account: adopt any pre-accounts data, else start fresh
     try { S = JSON.parse(localStorage.getItem(LEGACY_KEY)); } catch { S = null; }
     if (!S) S = JSON.parse(JSON.stringify(DEFAULTS));
-    save();
   }
-  // Migration: classes saved before programs existed default to school
-  if (S.classes && S.classes.some(c => c.program === undefined)) {
-    S.classes.forEach(c => { if (c.program === undefined) c.program = "Main (school)"; });
-    save();
-  }
+  // Migrations for data saved before newer features existed
+  if (S.classes) S.classes.forEach(c => { if (c.program === undefined) c.program = "Main (school)"; });
+  S.stars ??= 0;
+  S.starredDays ??= {};
+  S.rewards ??= JSON.parse(JSON.stringify(DEFAULTS.rewards));
+  S.backpack ??= [...DEFAULTS.backpack];
+  S.backpackDays ??= {};
+  S.settings.schoolStart ??= DEFAULTS.settings.schoolStart;
+  save();
 }
 function save() { if (S) localStorage.setItem(dataKey(currentAccount()), JSON.stringify(S)); }
 
@@ -573,7 +645,7 @@ function renderAccountList() {
   $("accountList").innerHTML = accts.length
     ? accts.map(a => `
       <button class="acct-chip" data-login="${esc(a.name)}">
-        <span class="avatar">${esc(a.name.trim()[0]?.toUpperCase() || "?")}</span>
+        <span class="avatar">${esc(a.avatar || a.name.trim()[0]?.toUpperCase() || "?")}</span>
         <span class="name">${esc(a.name)}${a.pin ? " 🔒" : ""}</span>
         <span class="acct-del" data-del-acct="${esc(a.name)}" title="Delete account">×</span>
       </button>`).join("")
@@ -587,7 +659,7 @@ function showOverlay() {
 function hideOverlay() { $("accountOverlay").classList.add("hidden"); }
 
 function login(name, skipPin) {
-  const acct = getAccounts().find(a => a.name === name);
+  const acct = getAccount(name);
   if (!acct) return;
   if (acct.pin && !skipPin) {
     const entered = prompt(`Enter the PIN for ${name}:`);
@@ -597,7 +669,7 @@ function login(name, skipPin) {
   localStorage.setItem(CUR_KEY, name);
   loadState(name);
   hideOverlay();
-  $("accountBtn").textContent = `👤 ${name}`;
+  $("accountBtn").textContent = `${acct.avatar || "👤"} ${name}`;
   setEditing(false);
   renderAll();
 }
@@ -615,7 +687,7 @@ $("acctCreate").onclick = () => {
   if (pin && !/^\d{4}$/.test(pin)) { alert("PIN must be exactly 4 digits (or leave it blank)."); return; }
   const accts = getAccounts();
   if (accts.some(a => a.name.toLowerCase() === name.toLowerCase())) { alert("That name is taken — try another!"); return; }
-  accts.push({ name, pin: pin || null });
+  accts.push({ name, pin: pin || null, avatar: null });
   setAccounts(accts);
   $("acctName").value = ""; $("acctPin").value = "";
   login(name, true);
@@ -641,13 +713,39 @@ $("accountList").addEventListener("click", e => {
 
 $("accountBtn").onclick = () => { if (confirm("Switch account / log out?")) logout(); };
 
+/* ═══════════ Avatar picker ═══════════ */
+const AVATARS = ["😀","😎","🤓","🥳","😺","🐶","🦊","🐼","🦁","🐸","🦄","🐰","⚽","🏀","🎮","🎸","🚀","🌟","🍕","🎨","📚","🧩","👾","🤖"];
+$("avatarBtn").onclick = e => {
+  e.stopPropagation();
+  const pop = $("avatarPop");
+  if (!pop.classList.contains("hidden")) { pop.classList.add("hidden"); return; }
+  const acct = getAccount(currentAccount());
+  pop.innerHTML = AVATARS.map(a =>
+    `<button data-avatar="${a}" ${acct && acct.avatar === a ? 'style="border-color:var(--accent);background:#fff"' : ""}>${a}</button>`
+  ).join("");
+  pop.classList.remove("hidden");
+};
+$("avatarPop").addEventListener("click", e => {
+  const btn = e.target.closest("[data-avatar]");
+  if (!btn) return;
+  const accts = getAccounts();
+  const acct = accts.find(a => a.name === currentAccount());
+  if (!acct) return;
+  acct.avatar = btn.dataset.avatar;
+  setAccounts(accts);
+  $("accountBtn").textContent = `${acct.avatar} ${acct.name}`;
+  $("avatarPop").classList.add("hidden");
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest("#avatarPop") && !e.target.closest("#avatarBtn")) $("avatarPop").classList.add("hidden");
+});
+
 /* ═══════════ Get Ready to Study → FocusTown ═══════════ */
 $("studyBtn").onclick = () => {
   const note = $("studyNote");
   note.textContent = "Opening FocusTown…";
   let launched = false;
-  const onHide = () => { launched = true; };
-  document.addEventListener("visibilitychange", onHide, { once: true });
+  document.addEventListener("visibilitychange", () => { launched = true; }, { once: true });
   window.addEventListener("blur", () => { launched = true; }, { once: true });
 
   // Try the app's custom URL scheme (browsers will ask to allow opening the app)
@@ -732,14 +830,23 @@ document.addEventListener("input", e => {
   const td = e.target.closest("td[contenteditable][data-t]");
   if (td) {
     const { t, r, f } = td.dataset;
+    const old = S[t][+r][f];
     let v = td.innerText.trim();
     if (["amount", "target", "saved", "hrs", "mins", "period"].includes(f)) v = parseFloat(v) || 0;
     S[t][+r][f] = v;
+    // Stars: marking homework Completed earns +5
+    if (t === "assignments" && f === "status" && !/complete/i.test(String(old)) && /complete/i.test(String(v))) {
+      awardStars(5, "+5 ⭐ for finishing homework!");
+    }
     save(); renderDerived();
     return;
   }
   const el = e.target.closest("[data-edit-text]");
-  if (el) { S.settings[el.dataset.editText] = el.innerText.trim(); save(); }
+  if (el) {
+    S.settings[el.dataset.editText] = el.innerText.trim();
+    save();
+    if (el.dataset.editText === "schoolStart") renderCountdown();
+  }
 });
 
 /* Delete row + add row */
@@ -790,7 +897,7 @@ function setEditing(v) {
   document.body.classList.toggle("editing", v);
   $("editToggle").style.display = v ? "none" : "";
   if (!S) return;
-  renderTables(); renderTexts(); renderHabits();
+  renderTables(); renderTexts(); renderHabits(); renderBackpack(); renderRewards();
 }
 $("editToggle").onclick = () => setEditing(true);
 $("doneBtn").onclick = () => setEditing(false);
@@ -849,6 +956,77 @@ function renderProgress() {
 }
 renderProgress(); setInterval(renderProgress, 60000);
 
+/* ═══════════ Back-to-school countdown ═══════════ */
+function renderCountdown() {
+  const target = S.settings.schoolStart;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(target || "")) {
+    $("countdownDays").textContent = "—";
+    $("countdownSub").textContent = "Set your first day in Customize mode";
+    return;
+  }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(target + "T00:00:00") - today) / 864e5);
+  if (days > 0) {
+    $("countdownDays").textContent = days;
+    $("countdownSub").textContent = `day${days === 1 ? "" : "s"} until the first day of school!`;
+  } else if (days === 0) {
+    $("countdownDays").textContent = "🎉";
+    $("countdownSub").textContent = "The first day of school is TODAY — good luck!";
+  } else {
+    $("countdownDays").textContent = "🎒";
+    $("countdownSub").textContent = "School is in session. You've got this!";
+  }
+}
+
+/* ═══════════ Stars & rewards ═══════════ */
+function awardStars(n, reason) {
+  S.stars = Math.max(0, (S.stars || 0) + n);
+  save(); renderRewards();
+  if (reason) {
+    const note = $("starNote");
+    note.textContent = reason;
+    setTimeout(() => { note.textContent = ""; }, 4000);
+  }
+}
+function renderRewards() {
+  $("starsCount").textContent = S.stars;
+  $("rewardsList").innerHTML = S.rewards.map((r, i) => `
+    <div class="reward-row">
+      ${editing
+        ? `<span class="reward-name" contenteditable data-reward-name="${i}">${esc(r.name)}</span>
+           <span class="reward-cost">⭐ <span contenteditable data-reward-cost="${i}">${r.cost}</span></span>
+           <button class="row-del" data-reward-del="${i}" aria-label="Delete reward">×</button>`
+        : `<span class="reward-name">${esc(r.name)}</span>
+           <button class="redeem-btn" data-redeem="${i}" ${S.stars < r.cost ? "disabled" : ""}>Redeem ⭐ ${r.cost}</button>`}
+    </div>`).join("") || `<p style="color:var(--muted);font-size:.85rem">No rewards yet — add some in Customize mode.</p>`;
+}
+$("rewardsList").addEventListener("click", e => {
+  const btn = e.target.closest("[data-redeem]");
+  if (btn) {
+    const r = S.rewards[+btn.dataset.redeem];
+    if (S.stars < r.cost) return;
+    if (confirm(`Redeem "${r.name}" for ${r.cost} ⭐?`)) {
+      S.stars -= r.cost; save(); renderRewards();
+      const note = $("starNote");
+      note.textContent = `🎉 Enjoy: ${r.name}!`;
+      setTimeout(() => { note.textContent = ""; }, 5000);
+    }
+    return;
+  }
+  const del = e.target.closest("[data-reward-del]");
+  if (del) { S.rewards.splice(+del.dataset.rewardDel, 1); save(); renderRewards(); }
+});
+$("rewardsList").addEventListener("input", e => {
+  const nameEl = e.target.closest("[data-reward-name]");
+  if (nameEl) { S.rewards[+nameEl.dataset.rewardName].name = nameEl.innerText.trim(); save(); return; }
+  const costEl = e.target.closest("[data-reward-cost]");
+  if (costEl) { S.rewards[+costEl.dataset.rewardCost].cost = Math.max(1, parseInt(costEl.innerText.trim()) || 1); save(); }
+});
+$("rewardAddBtn").onclick = () => {
+  S.rewards.push({ name: "✨ New reward", cost: 20 });
+  save(); renderRewards();
+};
+
 /* ═══════════ To-do list (unlimited — add as many as you want!) ═══════════ */
 function renderTodos() {
   $("todoList").innerHTML = S.todos.map((t, i) => `
@@ -861,7 +1039,10 @@ function renderTodos() {
 }
 $("todoList").addEventListener("change", e => {
   const cb = e.target.closest("[data-todo-check]");
-  if (cb) { S.todos[+cb.dataset.todoCheck].done = cb.checked; save(); renderTodos(); }
+  if (!cb) return;
+  S.todos[+cb.dataset.todoCheck].done = cb.checked;
+  save(); renderTodos();
+  awardStars(cb.checked ? 2 : -2, cb.checked ? "+2 ⭐ for finishing a task!" : null);
 });
 $("todoList").addEventListener("click", e => {
   const del = e.target.closest("[data-todo-del]");
@@ -878,11 +1059,19 @@ $("todoAddBtn").onclick = addTodo;
 $("todoInput").addEventListener("keydown", e => { if (e.key === "Enter") addTodo(); });
 $("todoTagInput").addEventListener("keydown", e => { if (e.key === "Enter") addTodo(); });
 
-/* ═══════════ Habits ═══════════ */
+/* ═══════════ Habits + streaks ═══════════ */
 function todayHabits() {
   const key = todayISO();
   if (!S.habitDays[key]) S.habitDays[key] = S.habits.map(() => false);
   return S.habitDays[key];
+}
+function habitStreak() {
+  const full = iso => { const a = S.habitDays[iso]; return a && a.length > 0 && a.every(Boolean); };
+  const d = new Date();
+  if (!full(isoOf(d))) d.setDate(d.getDate() - 1);  // today still in progress doesn't break the streak
+  let n = 0;
+  while (full(isoOf(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
 }
 function renderHabits() {
   const state = todayHabits();
@@ -894,12 +1083,18 @@ function renderHabits() {
         : `<span>${esc(h)}</span>`}
     </label>`).join("");
   const done = state.filter(Boolean).length;
-  $("habitScore").textContent = `Today's score: ${done}/${S.habits.length}`;
+  const streak = habitStreak();
+  $("habitScore").textContent = `Today's score: ${done}/${S.habits.length}` + (streak > 0 ? ` · 🔥 ${streak}-day streak` : "");
 }
 $("habitList").addEventListener("change", e => {
   const cb = e.target.closest("[data-habit]");
   if (!cb) return;
   todayHabits()[+cb.dataset.habit] = cb.checked;
+  // Perfect day bonus: +5 stars, once per day
+  if (S.habits.length > 0 && todayHabits().every(Boolean) && !S.starredDays[todayISO()]) {
+    S.starredDays[todayISO()] = true;
+    awardStars(5, "+5 ⭐ — perfect habit day!");
+  }
   save(); renderHabits(); renderHabitHistory();
 });
 $("habitList").addEventListener("input", e => {
@@ -928,6 +1123,49 @@ function renderHabitHistory() {
     }).join("") + "</tbody>";
 }
 
+/* ═══════════ Backpack check (resets every day) ═══════════ */
+function todayBackpack() {
+  const key = todayISO();
+  if (!S.backpackDays[key]) S.backpackDays[key] = S.backpack.map(() => false);
+  return S.backpackDays[key];
+}
+function renderBackpack() {
+  const state = todayBackpack();
+  $("backpackList").innerHTML = S.backpack.map((b, i) => `
+    <label class="habit-row ${state[i] ? "done" : ""}">
+      <input type="checkbox" ${state[i] ? "checked" : ""} data-bp="${i}">
+      ${editing
+        ? `<span contenteditable data-bp-name="${i}">${esc(b)}</span><button class="row-del" data-bp-del="${i}">×</button>`
+        : `<span>${esc(b)}</span>`}
+    </label>`).join("");
+  const done = state.filter(Boolean).length;
+  $("backpackScore").textContent = done === S.backpack.length && S.backpack.length > 0
+    ? "🎒 All packed — ready for school!" : `Packed: ${done}/${S.backpack.length}`;
+}
+$("backpackList").addEventListener("change", e => {
+  const cb = e.target.closest("[data-bp]");
+  if (!cb) return;
+  todayBackpack()[+cb.dataset.bp] = cb.checked;
+  save(); renderBackpack();
+});
+$("backpackList").addEventListener("input", e => {
+  const el = e.target.closest("[data-bp-name]");
+  if (el) { S.backpack[+el.dataset.bpName] = el.innerText.trim(); save(); }
+});
+$("backpackList").addEventListener("click", e => {
+  const del = e.target.closest("[data-bp-del]");
+  if (!del) return;
+  const i = +del.dataset.bpDel;
+  S.backpack.splice(i, 1);
+  Object.values(S.backpackDays).forEach(day => day.splice(i, 1));
+  save(); renderBackpack();
+});
+$("backpackAddBtn").onclick = () => {
+  S.backpack.push("🎒 New item");
+  Object.values(S.backpackDays).forEach(day => day.push(false));
+  save(); renderBackpack();
+};
+
 /* ═══════════ Derived views ═══════════ */
 function renderDerived() {
   const deadlines = [
@@ -950,7 +1188,8 @@ function renderDerived() {
 /* ═══════════ Boot ═══════════ */
 function renderAll() {
   renderTexts(); renderSwatches(); renderTables(); renderTodos();
-  renderHabits(); renderHabitHistory(); renderDerived();
+  renderHabits(); renderHabitHistory(); renderBackpack();
+  renderRewards(); renderCountdown(); renderDerived();
 }
 (function boot() {
   const cur = currentAccount();
