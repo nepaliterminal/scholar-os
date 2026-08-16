@@ -411,7 +411,7 @@
         <p>Send Poke AI a summary of your day — habits, homework, stars, and more.</p>
         <button class="study-btn" id="reportBtn">📮 Send Daily Report to Poke</button>
         <div class="study-note" id="reportNote"></div>
-        <div class="edit-only" style="margin-top:10px;font-size:.78rem;color:var(--muted)">Poke email or phone #: <span data-edit-text="pokeAddress">poke@poke.com</span></div>
+        <div class="edit-only" style="margin-top:10px;font-size:.78rem;color:var(--muted)">Poke email or phone #: <span data-edit-text="pokeAddress">+1 (650) 422-9093</span></div>
       </div>
 
       <div class="card">
@@ -647,7 +647,10 @@ function loadState(name) {
   S.backpack ??= [...DEFAULTS.backpack];
   S.backpackDays ??= {};
   S.settings.schoolStart ??= DEFAULTS.settings.schoolStart;
-  S.settings.pokeAddress ??= "poke@poke.com";
+  // Poke's number — replaces the old placeholder default on existing accounts too
+  if (!S.settings.pokeAddress || S.settings.pokeAddress === "poke@poke.com") {
+    S.settings.pokeAddress = "+1 (650) 422-9093";
+  }
   save();
 }
 function save() { if (S) localStorage.setItem(dataKey(currentAccount()), JSON.stringify(S)); }
