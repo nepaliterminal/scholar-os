@@ -406,6 +406,14 @@
         <div class="study-note" id="starNote"></div>
       </div>
 
+      <div class="card study-card">
+        <h2>📤 Daily Report</h2>
+        <p>Send Poke AI a summary of your day — habits, homework, stars, and more.</p>
+        <button class="study-btn" id="reportBtn">📮 Send Daily Report to Poke</button>
+        <div class="study-note" id="reportNote"></div>
+        <div class="edit-only" style="margin-top:10px;font-size:.78rem;color:var(--muted)">Poke email or phone #: <span data-edit-text="pokeAddress">poke@poke.com</span></div>
+      </div>
+
       <div class="card">
         <h2>Hubs</h2>
         <div class="hubs">
@@ -639,6 +647,7 @@ function loadState(name) {
   S.backpack ??= [...DEFAULTS.backpack];
   S.backpackDays ??= {};
   S.settings.schoolStart ??= DEFAULTS.settings.schoolStart;
+  S.settings.pokeAddress ??= "poke@poke.com";
   save();
 }
 function save() { if (S) localStorage.setItem(dataKey(currentAccount()), JSON.stringify(S)); }
@@ -1167,6 +1176,57 @@ $("backpackAddBtn").onclick = () => {
   S.backpack.push("🎒 New item");
   Object.values(S.backpackDays).forEach(day => day.push(false));
   save(); renderBackpack();
+};
+
+/* ═══════════ Daily report → Poke AI ═══════════ */
+function buildReport() {
+  const name = currentAccount() || "Me";
+  const date = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const habits = todayHabits();
+  const habitsDone = habits.filter(Boolean).length;
+  const bp = todayBackpack();
+  const bpDone = bp.filter(Boolean).length;
+  const todosDone = S.todos.filter(t => t.done);
+  const todosOpen = S.todos.filter(t => !t.done);
+  const weekOut = new Date(); weekOut.setDate(weekOut.getDate() + 7);
+  const soon = [
+    ...S.assignments.filter(a => a.status !== "Completed").map(a => ({ what: a.name, where: a.cls, due: a.due })),
+    ...S.exams.map(e => ({ what: e.name, where: e.cls, due: e.date })),
+  ].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d.due) && new Date(d.due + "T23:59:59") <= weekOut)
+   .sort((a, b) => a.due.localeCompare(b.due));
+
+  const lines = [
+    `📊 Daily Report — ${name}`,
+    date,
+    "",
+    `⭐ Stars: ${S.stars} · 🔥 Habit streak: ${habitStreak()} day(s)`,
+    "",
+    `✅ Habits today: ${habitsDone}/${S.habits.length}`,
+    ...S.habits.map((h, i) => `  ${habits[i] ? "✔" : "✘"} ${h}`),
+    "",
+    `🎒 Backpack: ${bpDone}/${S.backpack.length} packed${bpDone === S.backpack.length && S.backpack.length ? " — ready!" : ""}`,
+    "",
+    `📝 To-dos done today: ${todosDone.length ? todosDone.map(t => t.txt).join("; ") : "none"}`,
+    `📌 Still open: ${todosOpen.length ? todosOpen.map(t => t.txt).join("; ") : "nothing — all clear!"}`,
+    "",
+    soon.length ? "📅 Due in the next 7 days:" : "📅 Nothing due in the next 7 days 🎉",
+    ...soon.map(d => `  • ${d.what} (${d.where}) — ${fmtDate(d.due)}`),
+  ];
+  return lines.join("\n");
+}
+
+$("reportBtn").onclick = () => {
+  const addr = (S.settings.pokeAddress || "").trim();
+  if (!addr) { $("reportNote").textContent = "Set your Poke address in Customize mode first."; return; }
+  const report = buildReport();
+  const name = currentAccount() || "Scholar OS";
+  // Phone number → open Messages (sms:); anything with @ → open Mail (mailto:)
+  const url = addr.includes("@")
+    ? `mailto:${encodeURIComponent(addr)}?subject=${encodeURIComponent(`Daily Report — ${name} — ${todayISO()}`)}&body=${encodeURIComponent(report)}`
+    : `sms:${encodeURIComponent(addr.replace(/[^0-9+]/g, ""))}&body=${encodeURIComponent(report)}`;
+  window.location.href = url;
+  $("reportNote").textContent = "Opening your mail/messages app — just hit Send! 🚀";
+  setTimeout(() => { $("reportNote").textContent = ""; }, 6000);
 };
 
 /* ═══════════ Derived views ═══════════ */
