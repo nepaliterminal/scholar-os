@@ -1217,16 +1217,20 @@ function buildReport() {
 
 $("reportBtn").onclick = () => {
   const addr = (S.settings.pokeAddress || "").trim();
-  if (!addr) { $("reportNote").textContent = "Set your Poke address in Customize mode first."; return; }
+  if (!addr) { $("reportNote").textContent = "Set your Poke number in Customize mode first."; return; }
   const report = buildReport();
   const name = currentAccount() || "Scholar OS";
+  // Always copy the report — macOS Messages doesn't always prefill the text
+  if (navigator.clipboard) navigator.clipboard.writeText(report).catch(() => {});
   // Phone number → open Messages (sms:); anything with @ → open Mail (mailto:)
   const url = addr.includes("@")
     ? `mailto:${encodeURIComponent(addr)}?subject=${encodeURIComponent(`Daily Report — ${name} — ${todayISO()}`)}&body=${encodeURIComponent(report)}`
     : `sms:${encodeURIComponent(addr.replace(/[^0-9+]/g, ""))}&body=${encodeURIComponent(report)}`;
   window.location.href = url;
-  $("reportNote").textContent = "Opening your mail/messages app — just hit Send! 🚀";
-  setTimeout(() => { $("reportNote").textContent = ""; }, 6000);
+  $("reportNote").textContent = addr.includes("@")
+    ? "Opening Mail — just hit Send! 🚀"
+    : "Opening Messages… if the text box is empty, press ⌘V — the report is copied! 📋";
+  setTimeout(() => { $("reportNote").textContent = ""; }, 8000);
 };
 
 /* ═══════════ Derived views ═══════════ */
