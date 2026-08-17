@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Session OS</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="brand-mark" aria-hidden="true">S</div>
+      <div>
+        <p class="eyebrow">ScholarOS companion</p>
+        <h1>Study Session</h1>
+      </div>
+      <a class="icon-button" href="options.html" target="_blank" aria-label="Open settings" title="Settings">⚙</a>
+    </header>
+
+    <div id="errorBanner" class="message error hidden" role="alert"></div>
+    <div id="successBanner" class="message success hidden" role="status"></div>
+
+    <section id="loadingView" class="center-panel">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Loading your study space…</p>
+    </section>
+
+    <section id="startView" class="hidden">
+      <div class="welcome-card">
+        <p class="eyebrow">Ready when you are</p>
+        <h2>What will you finish?</h2>
+        <p>A clear target makes the timer useful—not just busy.</p>
+      </div>
+
+      <form id="startForm" class="form-stack">
+        <label>
+          <span>Subject</span>
+          <input id="subjectInput" list="subjectSuggestions" maxlength="100" placeholder="Math, Science, English…" required>
+          <datalist id="subjectSuggestions"></datalist>
+        </label>
+
+        <label>
+          <span>Session intention</span>
+          <textarea id="intentionInput" maxlength="500" rows="2" placeholder="Finish questions 1–12"></textarea>
+        </label>
+
+        <fieldset class="duration-field">
+          <legend>Focus time</legend>
+          <div class="duration-row">
+            <button type="button" class="duration-chip" data-minutes="15">15m</button>
+            <button type="button" class="duration-chip selected" data-minutes="25">25m</button>
+            <button type="button" class="duration-chip" data-minutes="45">45m</button>
+            <label class="custom-duration"><input id="durationInput" type="number" min="5" max="180" value="25"><span>min</span></label>
+          </div>
+        </fieldset>
+
+        <details class="brain-dump">
+          <summary><span>🧠 60-second brain dump</span><small>Recommended</small></summary>
+          <p>Before opening notes, write what you remember from the last session.</p>
+          <textarea id="brainDumpInput" maxlength="4000" rows="4" placeholder="I remember that…"></textarea>
+        </details>
+
+        <div class="protection-row">
+          <span class="protection-icon" aria-hidden="true">🛡️</span>
+          <div><strong>Focus protection on</strong><small id="protectionSummary">Loading rules…</small></div>
+          <a href="options.html" target="_blank">Edit</a>
+        </div>
+
+        <button id="startButton" class="primary-button" type="submit">Start focus session</button>
+      </form>
+
+      <section class="recent-section">
+        <div class="section-heading"><h2>Recent sessions</h2><span id="syncCount"></span></div>
+        <div id="recentSessions" class="recent-list"></div>
+      </section>
+    </section>
+
+    <section id="activeView" class="hidden">
+      <div class="live-row"><span class="live-dot"></span><span>Focus session active</span></div>
+      <h2 id="activeSubject" class="active-subject"></h2>
+      <p id="activeIntention" class="active-intention"></p>
+
+      <div class="timer-wrap">
+        <div id="timerText" class="timer">25:00</div>
+        <p>remaining</p>
+      </div>
+      <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+
+      <div class="metric-grid">
+        <div><strong id="highlightCount">0</strong><span>highlights</span></div>
+        <div><strong id="noteCount">0</strong><span>notes</span></div>
+        <div><strong id="blockedCount">0</strong><span>redirects</span></div>
+      </div>
+
+      <button id="captureNoteButton" class="primary-button soft" type="button">＋ Capture a page note</button>
+      <button id="stopButton" class="text-button danger" type="button">End session early</button>
+
+      <section class="capture-section">
+        <h3>Latest captures</h3>
+        <div id="currentCaptures" class="capture-list"></div>
+        <p class="shortcut-hint">Select text on any page to save a highlight · <kbd>⌘</kbd><kbd>⇧</kbd><kbd>H</kbd></p>
+      </section>
+    </section>
+
+    <section id="recapView" class="hidden">
+      <div class="celebration" aria-hidden="true">✦</div>
+      <p class="eyebrow centered">Session saved</p>
+      <h2 id="recapTitle" class="recap-title"></h2>
+      <p id="recapStats" class="recap-stats"></p>
+
+      <div id="starSuggestion" class="star-card"></div>
+
+      <fieldset class="rating-field">
+        <legend>Did you finish your intention?</legend>
+        <div class="rating-grid">
+          <button type="button" data-rating="done">Done</button>
+          <button type="button" data-rating="mostly">Mostly</button>
+          <button type="button" data-rating="not-yet">Not yet</button>
+        </div>
+      </fieldset>
+
+      <label class="reflection-label">
+        <span>One thing I learned</span>
+        <textarea id="reflectionInput" maxlength="1000" rows="3" placeholder="I learned that…"></textarea>
+      </label>
+
+      <button id="saveRecapButton" class="primary-button" type="button">Save reflection</button>
+      <button id="dismissRecapButton" class="text-button" type="button">Skip for now</button>
+    </section>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Session OS settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="page-header">
+    <div class="brand-mark" aria-hidden="true">S</div>
+    <div>
+      <p>Study Session OS</p>
+      <h1>Focus settings</h1>
+    </div>
+  </header>
+
+  <main>
+    <div id="message" class="message hidden" role="status"></div>
+
+    <form id="settingsForm">
+      <section class="card">
+        <div class="card-heading">
+          <div><p class="eyebrow">Sessions</p><h2>Focus defaults</h2></div>
+        </div>
+        <label class="compact-field">
+          <span>Default session length</span>
+          <span class="number-wrap"><input id="defaultDuration" type="number" min="5" max="180"><small>minutes</small></span>
+        </label>
+      </section>
+
+      <section class="card">
+        <div class="card-heading">
+          <div><p class="eyebrow">Protection</p><h2>Blocked websites</h2></div>
+          <span class="count" id="siteCount"></span>
+        </div>
+        <p class="help">Enter one domain per line. These sites redirect to the focus page only while a session is active.</p>
+        <textarea id="blockedSites" rows="10" spellcheck="false" placeholder="reddit.com&#10;tiktok.com"></textarea>
+        <p id="youtubeConflict" class="warning hidden"><strong>YouTube is blocked completely.</strong> Remove <code>youtube.com</code> from this list if you want to open YouTube with blurred thumbnails instead.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-heading"><div><p class="eyebrow">YouTube</p><h2>Distraction shield</h2></div></div>
+        <label>
+          <span>Thumbnail treatment</span>
+          <select id="youtubeShield">
+            <option value="off">Off</option>
+            <option value="blur">Blur thumbnails</option>
+            <option value="hide">Hide thumbnails</option>
+          </select>
+        </label>
+        <label class="check-row"><input id="hideYouTubeShorts" type="checkbox"><span><strong>Hide Shorts</strong><small>Remove Shorts shelves and navigation during sessions.</small></span></label>
+        <label class="check-row"><input id="hideYouTubeRecommendations" type="checkbox"><span><strong>Hide recommendations</strong><small>Hide the homepage feed and “Up next” column.</small></span></label>
+      </section>
+
+      <section class="card">
+        <div class="card-heading"><div><p class="eyebrow">Connection</p><h2>ScholarOS bridge</h2></div></div>
+        <p class="help">Events remain in a private outbox until this exact dashboard URL acknowledges them.</p>
+        <label>
+          <span>ScholarOS dashboard URL</span>
+          <input id="scholarOsUrl" type="url" placeholder="https://nepaliterminal.github.io/scholar-os/">
+        </label>
+        <p class="callout">For a local <code>file://</code> dashboard, enable “Allow access to file URLs” for this extension in Chrome’s extension details.</p>
+      </section>
+
+      <button id="saveButton" class="primary-button" type="submit">Save settings</button>
+    </form>
+
+    <section class="card requests-card">
+      <div class="card-heading">
+        <div><p class="eyebrow">Parent queue</p><h2>Access requests</h2></div>
+        <button id="clearRequests" class="small-button" type="button">Clear history</button>
+      </div>
+      <div id="requestList" class="request-list"></div>
+    </section>
+
+    <section class="card data-card">
+      <div><p class="eyebrow">Your data</p><h2>Local export</h2></div>
+      <p class="help">Download sessions, captures, settings, and the ScholarOS event outbox as JSON.</p>
+      <button id="exportButton" class="small-button" type="button">Export my data</button>
+    </section>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

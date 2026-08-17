@@ -1,0 +1,10 @@
+{
+  "name": "scholar-os",
+  "version": "0.2.0",
+  "private": true,
+  "description": "A local-first student dashboard with the Study Session OS Chrome extension.",
+  "scripts": {
+    "check": "node scripts/validate.mjs && npm --prefix extension run check",
+    "check:browser": "node scripts/dashboard-smoke.mjs"
+  }
+}
