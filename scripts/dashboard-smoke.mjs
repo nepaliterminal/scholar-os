@@ -131,6 +131,8 @@ try {
     connectionText: document.querySelector('#studyConnection').innerText,
     alexaText: document.querySelector('#alexaConnection').innerText,
     alexaControlsDisabled: document.querySelector('#alexaSpeakBtn').disabled,
+    scholarTask: document.querySelector('#scholarNextTask').innerText,
+    autopilotDisabled: document.querySelector('#scholarAutopilotBtn').disabled,
   })`);
   assert.equal(initial.overlayHidden, true);
   assert.equal(initial.account, 'Smoke Test');
@@ -138,6 +140,8 @@ try {
   assert.match(initial.connectionText, /Extension not detected/);
   assert.match(initial.alexaText, /Extension not detected/);
   assert.equal(initial.alexaControlsDisabled, true);
+  assert.ok(initial.scholarTask.length > 2);
+  assert.equal(initial.autopilotDisabled, true);
 
   const integration = await evaluate(`(() => {
     const completion = {
@@ -154,7 +158,8 @@ try {
     const relatedAck = window.ScholarOS.processEvents([
       { id: 'evt_smoke_reflection', version: 1, type: 'session.reflected', occurredAt: new Date().toISOString(), payload: { sessionId: 'session_smoke', scholarAccount: 'Smoke Test', rating: 'done', reflection: 'The bridge works.' } },
       { id: 'evt_smoke_capture', version: 1, type: 'capture.created', occurredAt: new Date().toISOString(), payload: { id: 'capture_smoke', sessionId: 'session_smoke', scholarAccount: 'Smoke Test', subject: 'Science', kind: 'highlight', quote: 'A useful fact', title: 'Smoke source', createdAt: new Date().toISOString() } },
-      { id: 'evt_smoke_request', version: 1, type: 'unblock.requested', occurredAt: new Date().toISOString(), payload: { id: 'request_smoke', sessionId: 'session_smoke', scholarAccount: 'Smoke Test', subject: 'Science', site: 'example.com', reason: 'Teacher link', status: 'pending', createdAt: new Date().toISOString() } }
+      { id: 'evt_smoke_request', version: 1, type: 'unblock.requested', occurredAt: new Date().toISOString(), payload: { id: 'request_smoke', sessionId: 'session_smoke', scholarAccount: 'Smoke Test', subject: 'Science', site: 'example.com', reason: 'Teacher link', status: 'pending', createdAt: new Date().toISOString() } },
+      { id: 'evt_smoke_request_resolved', version: 1, type: 'unblock.resolved', occurredAt: new Date().toISOString(), payload: { id: 'request_smoke', sessionId: 'session_smoke', scholarAccount: 'Smoke Test', site: 'example.com', status: 'denied', resolvedAt: new Date().toISOString(), allowedUntil: null } }
     ]);
     const wrongAccountAck = window.ScholarOS.processEvents([
       { id: 'evt_wrong_account', version: 1, type: 'session.completed', occurredAt: new Date().toISOString(), payload: { sessionId: 'session_wrong', scholarAccount: 'Someone Else', subject: 'Math', focusedMinutes: 10, suggestedStars: 5 } }
@@ -177,18 +182,76 @@ try {
 
   assert.deepEqual(integration.firstAck, ['evt_smoke_completed']);
   assert.deepEqual(integration.replayAck, ['evt_smoke_completed']);
-  assert.equal(integration.relatedAck.length, 3);
+  assert.equal(integration.relatedAck.length, 4);
   assert.deepEqual(integration.wrongAccountAck, []);
   assert.equal(integration.stars, 5, 'a replayed completion must not duplicate study stars');
   assert.equal(integration.sessions, 1, 'a replayed completion must not duplicate history');
   assert.match(integration.sessionResult, /Science/);
   assert.match(integration.captureResult, /A useful fact/);
   assert.match(integration.requestResult, /Teacher link/);
+  assert.match(integration.requestResult, /denied/);
   assert.equal(integration.weekTotal, '25 min');
   assert.equal(integration.completionRate, '100%');
   assert.equal(integration.focusStreak, '1 day');
   assert.match(integration.subjectAnalytics, /Science/);
   assert.match(integration.report, /Focus today: 25 min across 1 session/);
+
+  const scholarMode = await evaluate(`(async () => {
+    const rankedTask = nextScholarTask();
+    document.querySelector('#memoryType').value = 'flashcard';
+    document.querySelector('#memoryPrompt').value = 'What planet is known as the Red Planet?';
+    document.querySelector('#memoryDetails').value = 'Mars';
+    saveStudyMemory();
+    document.querySelector('#memoryType').value = 'note';
+    document.querySelector('#memoryPrompt').value = 'Orbit note';
+    document.querySelector('#memoryDetails').value = 'Planets orbit the Sun.';
+    saveStudyMemory();
+
+    studyExtensionAvailable = true;
+    alexaBridgeState = { connected: false, devices: [], routines: [], error: '' };
+    studyExtensionState.current = null;
+    const respond = event => {
+      if (event.source !== window || event.data?.source !== 'scholar-os' || event.data.command !== 'startSession') return;
+      const session = {
+        id: 'session_autopilot',
+        subject: event.data.payload.session.subject,
+        intention: event.data.payload.session.intention,
+        durationMinutes: event.data.payload.session.durationMinutes,
+        startedAt: Date.now(),
+        endsAt: Date.now() + event.data.payload.session.durationMinutes * 60000,
+      };
+      window.postMessage({ source: 'studyx-extension', version: 1, type: 'STUDYX_COMMAND_RESULT', commandId: event.data.commandId, ok: true, data: session }, '*');
+    };
+    window.addEventListener('message', respond);
+    await startScholarAutopilot();
+    window.removeEventListener('message', respond);
+    const stored = JSON.parse(localStorage.getItem('scholaros.g6.data.Smoke Test'));
+    return {
+      rankedTitle: rankedTask?.title,
+      rankedReason: rankedTask?.why,
+      rankedDuration: rankedTask?.duration,
+      memoryRendered: document.querySelector('#memoryList').innerText,
+      flashcards: stored.flashcards.length,
+      notes: stored.studyNotes.length,
+      answerMatched: answerMatches('It is Mars', 'Mars'),
+      morning: scholarMorningText(),
+      hint: scholarHint(rankedTask, 2),
+      autopilotIntention: studyExtensionState.current?.intention,
+      autopilotStatus: document.querySelector('#scholarModeStatus').innerText,
+    };
+  })()`);
+  assert.ok(scholarMode.rankedTitle);
+  assert.match(scholarMode.rankedReason, /priority|due|overdue|to-do/i);
+  assert.ok([15, 25, 45].includes(scholarMode.rankedDuration));
+  assert.match(scholarMode.memoryRendered, /Red Planet/);
+  assert.match(scholarMode.memoryRendered, /Orbit note/);
+  assert.equal(scholarMode.flashcards, 1);
+  assert.equal(scholarMode.notes, 1);
+  assert.equal(scholarMode.answerMatched, true);
+  assert.ok(scholarMode.morning.length <= 250);
+  assert.match(scholarMode.hint, /Without looking for the answer/);
+  assert.equal(scholarMode.autopilotIntention, scholarMode.rankedTitle);
+  assert.match(scholarMode.autopilotStatus, /Focus protection is on/);
 
   const alexaPrivacy = await evaluate(`(() => {
     const privateDeviceName = 'Private Bedroom Echo';

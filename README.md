@@ -12,10 +12,16 @@ ScholarOS is a local-first student dashboard with a connected Chrome extension f
 - Award the extension's suggested study stars once per completed session, even after reloads or event retries.
 - Include today's focus minutes in the ScholarOS daily report.
 - Control Alexa devices, media, volume, study announcements, and saved routines through a private localhost bridge.
+- Use Scholar Mode to rank the next task, explain the choice, choose a focus length, and start extension protection from one button.
+- Ask Alexa for the next task, a backpack/deadline morning check, a focus announcement, or a progressively more specific “unstuck” hint.
+- Save browser-dictated study notes and flashcards locally, turn extension captures into card drafts, and have Alexa speak quiz prompts.
+- Approve a reasoned website-access request for five minutes—or deny it—from ScholarOS; blocking returns automatically.
 
 The integration is local-first. The extension keeps a durable event outbox in `chrome.storage.local`; ScholarOS saves an event before acknowledging it, so closing either interface does not lose study activity.
 
 Alexa is opt-in per action. Amazon credentials never enter this repository, the extension, or the website. Echo/routine names, opaque device IDs, custom spoken text, and Alexa action history are kept only in the open ScholarOS tab and are not added to dashboard storage or analytics.
+
+The current Alexa bridge is intentionally outbound-only: Alexa can speak a quiz, plan, or hint, while dictation and spoken quiz answers use Chrome's microphone and stay local. Receiving open-ended speech directly from an Echo would require deploying and linking a separate public Alexa custom skill; ScholarOS does not quietly poll Alexa voice history.
 
 ## Run ScholarOS locally
 

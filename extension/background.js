@@ -6,6 +6,7 @@ const KEYS = Object.freeze({
   sessions: 'studyx.sessions',
   captures: 'studyx.captures',
   requests: 'studyx.unblockRequests',
+  allowances: 'studyx.siteAllowances',
   events: 'studyx.scholarEvents',
   recap: 'studyx.pendingRecap',
   scholarContext: 'studyx.scholarContext',
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS = Object.freeze({
 });
 
 const SESSION_ALARM = 'studyx.session.end';
+const ACCESS_ALARM = 'studyx.allowances.expire';
 const LEGACY_LOCAL_SCHOLAR_OS_URL = 'file:///Users/subed/notion1/scholar-os/index.html';
 const BLOCK_RULE_START = 1000;
 const BLOCK_RULE_END = 1999;
@@ -151,6 +153,7 @@ async function ensureDefaults() {
     KEYS.sessions,
     KEYS.captures,
     KEYS.requests,
+    KEYS.allowances,
     KEYS.events,
     KEYS.scholarContext,
   ]);
@@ -159,6 +162,7 @@ async function ensureDefaults() {
   if (!Array.isArray(stored[KEYS.sessions])) updates[KEYS.sessions] = [];
   if (!Array.isArray(stored[KEYS.captures])) updates[KEYS.captures] = [];
   if (!Array.isArray(stored[KEYS.requests])) updates[KEYS.requests] = [];
+  if (!Array.isArray(stored[KEYS.allowances])) updates[KEYS.allowances] = [];
   if (!Array.isArray(stored[KEYS.events])) updates[KEYS.events] = [];
   if (!stored[KEYS.scholarContext]) updates[KEYS.scholarContext] = normalizeScholarContext();
   await chrome.storage.local.set(updates);
@@ -191,13 +195,29 @@ async function clearBlockRules() {
 }
 
 async function applyBlockRules() {
-  const stored = await chrome.storage.local.get(KEYS.current);
+  const stored = await chrome.storage.local.get([KEYS.current, KEYS.allowances]);
   const session = stored[KEYS.current];
   await clearBlockRules();
+  await chrome.alarms.clear(ACCESS_ALARM);
   if (!session || session.endsAt <= Date.now()) return;
 
+  const now = Date.now();
+  const savedAllowances = Array.isArray(stored[KEYS.allowances]) ? stored[KEYS.allowances] : [];
+  const allowances = savedAllowances.filter((allowance) => (
+    allowance &&
+    allowance.sessionId === session.id &&
+    Number(allowance.expiresAt) > now &&
+    normalizeSite(allowance.site)
+  ));
+  if (allowances.length !== savedAllowances.length) {
+    await chrome.storage.local.set({ [KEYS.allowances]: allowances });
+  }
+  const nextExpiry = Math.min(...allowances.map((allowance) => Number(allowance.expiresAt)));
+  if (Number.isFinite(nextExpiry)) await chrome.alarms.create(ACCESS_ALARM, { when: nextExpiry });
+  const allowedSites = new Set(allowances.map((allowance) => normalizeSite(allowance.site)));
+
   const settings = await getSettings();
-  const rules = settings.blockedSites.map((site, index) => ({
+  const rules = settings.blockedSites.filter((site) => !allowedSites.has(site)).map((site, index) => ({
     id: BLOCK_RULE_START + index,
     priority: 1,
     action: {
@@ -315,7 +335,9 @@ async function finishSession(reason = 'stopped') {
     [KEYS.recap]: recap,
   });
   await chrome.storage.local.remove(KEYS.current);
+  await chrome.storage.local.set({ [KEYS.allowances]: [] });
   await chrome.alarms.clear(SESSION_ALARM);
+  await chrome.alarms.clear(ACCESS_ALARM);
   await clearBlockRules();
   await updateBadge(false, true);
   await queueScholarEvent('session.completed', {
@@ -421,6 +443,89 @@ async function recordBlockedAttempt(site, reason = '', countAttempt = true) {
   await queueScholarEvent('unblock.requested', request);
   await broadcastStateChanged();
   return { recorded: true, request };
+}
+
+async function resolveUnblock(input, sender) {
+  if (!(await senderIsScholarOs(sender))) throw new Error('ScholarOS bridge origin is not authorized.');
+  await finishExpiredSession();
+  const requestId = cleanText(input.requestId, 200);
+  const decision = input.decision === 'approve' ? 'approved' : input.decision === 'deny' ? 'denied' : '';
+  if (!requestId || !decision) throw new Error('Choose approve or deny for a valid access request.');
+
+  const stored = await chrome.storage.local.get([
+    KEYS.current,
+    KEYS.requests,
+    KEYS.allowances,
+    KEYS.scholarContext,
+  ]);
+  const requests = Array.isArray(stored[KEYS.requests]) ? stored[KEYS.requests] : [];
+  const request = requests.find((item) => item?.id === requestId);
+  if (!request) throw new Error('This access request is no longer available.');
+  if (request.status !== 'pending') throw new Error(`This request was already ${request.status}.`);
+  const activeAccount = stored[KEYS.scholarContext]?.account || null;
+  if (request.scholarAccount && request.scholarAccount !== activeAccount) {
+    throw new Error('Open the ScholarOS profile that created this request.');
+  }
+
+  const session = stored[KEYS.current];
+  if (decision === 'approved' && (!session || request.sessionId !== session.id)) {
+    throw new Error('That focus session has ended, so this request cannot be approved.');
+  }
+
+  const resolvedAt = new Date().toISOString();
+  const minutes = Math.round(clampNumber(input.minutes, 1, 30, 5));
+  const allowedUntil = decision === 'approved'
+    ? Math.min(session.endsAt, Date.now() + minutes * 60_000)
+    : null;
+  request.status = decision;
+  request.resolvedAt = resolvedAt;
+  request.allowedUntil = allowedUntil ? new Date(allowedUntil).toISOString() : null;
+
+  const allowances = Array.isArray(stored[KEYS.allowances]) ? stored[KEYS.allowances] : [];
+  if (decision === 'approved') {
+    allowances.push({
+      requestId,
+      sessionId: session.id,
+      site: request.site,
+      expiresAt: allowedUntil,
+      scholarAccount: request.scholarAccount || null,
+    });
+  }
+  await chrome.storage.local.set({
+    [KEYS.requests]: requests,
+    [KEYS.allowances]: allowances,
+  });
+  await applyBlockRules();
+  await queueScholarEvent('unblock.resolved', {
+    id: request.id,
+    sessionId: request.sessionId,
+    site: request.site,
+    status: request.status,
+    resolvedAt,
+    allowedUntil: request.allowedUntil,
+    scholarAccount: request.scholarAccount,
+  });
+  await broadcastStateChanged();
+  return {
+    id: request.id,
+    site: request.site,
+    status: request.status,
+    allowedUntil: request.allowedUntil,
+  };
+}
+
+async function getUnblockStatus(requestId, sender) {
+  requireExtensionPage(sender);
+  const stored = await chrome.storage.local.get(KEYS.requests);
+  const requests = Array.isArray(stored[KEYS.requests]) ? stored[KEYS.requests] : [];
+  const request = requests.find((item) => item?.id === cleanText(requestId, 200));
+  if (!request) throw new Error('Access request not found.');
+  return {
+    id: request.id,
+    site: request.site,
+    status: request.status,
+    allowedUntil: request.allowedUntil || null,
+  };
 }
 
 async function saveRecap(input) {
@@ -618,6 +723,7 @@ async function getAllData() {
     sessions: stored[KEYS.sessions] || [],
     captures: stored[KEYS.captures] || [],
     unblockRequests: stored[KEYS.requests] || [],
+    siteAllowances: stored[KEYS.allowances] || [],
     scholarEvents: stored[KEYS.events] || [],
     scholarContext: stored[KEYS.scholarContext] || normalizeScholarContext(),
   };
@@ -639,6 +745,10 @@ async function handleMessage(message, sender) {
       return recordBlockedAttempt(message.site);
     case 'studyx.requestUnblock':
       return recordBlockedAttempt(message.site, message.reason, false);
+    case 'studyx.resolveUnblock':
+      return resolveUnblock(message.request || {}, sender);
+    case 'studyx.getUnblockStatus':
+      return getUnblockStatus(message.requestId, sender);
     case 'studyx.saveRecap':
       return saveRecap(message.recap || {});
     case 'studyx.dismissRecap':
@@ -680,6 +790,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === SESSION_ALARM) finishSession('timer').catch(console.error);
+  if (alarm.name === ACCESS_ALARM) applyBlockRules().catch(console.error);
 });
 
 chrome.commands.onCommand.addListener(async (command) => {

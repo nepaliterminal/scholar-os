@@ -57,7 +57,7 @@ Acknowledgment happens only after ScholarOS saves the change. Replayed event IDs
 
 The extension posts `STUDYX_BRIDGE_AVAILABLE` when it detects the configured dashboard and posts `STUDYX_STATE` whenever session state changes. State includes the current session, pending recap, and pending event count.
 
-ScholarOS can send a `SCHOLAROS_COMMAND` with a unique `commandId`. Version 1 supports `getState`, `startSession`, `stopSession`, and `openOptions`. The extension answers with `STUDYX_COMMAND_RESULT` using the same ID. Commands are accepted only from the exact configured dashboard URL.
+ScholarOS can send a `SCHOLAROS_COMMAND` with a unique `commandId`. Version 1 supports `getState`, `startSession`, `stopSession`, `resolveUnblock`, and `openOptions`. `resolveUnblock` accepts a request ID, an `approve`/`deny` decision, and a clamped 1–30 minute duration. Approval is valid only for the active session and ScholarOS account. The extension answers with `STUDYX_COMMAND_RESULT` using the same ID. Commands are accepted only from the exact configured dashboard URL.
 
 The `getState` result sent to ScholarOS is explicitly reduced to the active session, pending recap, and pending-event count. Extension settings—especially the Alexa pairing token—are never included.
 
@@ -87,5 +87,6 @@ The Alexa bridge must use a loopback HTTP URL and a bearer pairing token stored 
 - `session.reflected` — done/mostly/not-yet rating and one-sentence reflection.
 - `capture.created` — explicit highlight or note with source URL and optional YouTube timestamp.
 - `unblock.requested` — blocked domain, reason, subject, and session ID.
+- `unblock.resolved` — approved/denied state and the temporary allowance expiry, if approved.
 
 ScholarOS should decide whether to accept `suggestedStars`; the extension never directly changes the ScholarOS balance.

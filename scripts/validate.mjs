@@ -26,6 +26,12 @@ for (const id of [
   'alexaMessage',
   'alexaRoutine',
   'alexaActionLog',
+  'scholarAutopilotBtn',
+  'scholarNextTask',
+  'memoryType',
+  'memoryList',
+  'quizQuestion',
+  'quizAskAlexaBtn',
 ]) {
   assert.ok(ids.includes(id), `missing ScholarOS integration element #${id}`);
 }
@@ -39,6 +45,11 @@ for (const marker of [
   'studyStarredSessionIds',
   'SCHOLAROS_ALEXA_REQUEST',
   'STUDYX_ALEXA_RESULT',
+  'resolveUnblock',
+  'unblock.resolved',
+  'nextScholarTask',
+  'scholarMorningText',
+  'scholarHint',
 ]) {
   assert.ok(html.includes(marker), `missing bridge marker ${marker}`);
 }

@@ -326,6 +326,9 @@
         case 'stopSession':
           data = await send('studyx.stopSession');
           break;
+        case 'resolveUnblock':
+          data = await send('studyx.resolveUnblock', { request: message.payload?.request || {} });
+          break;
         case 'openOptions':
           await chrome.runtime.openOptionsPage();
           data = { opened: true };

@@ -12,15 +12,17 @@ A dependency-free Manifest V3 extension that combines focus sessions, distractio
 - Include the current playback time with captures made on YouTube.
 - Track highlights, notes, and blocked navigation attempts in the live popup.
 - Create an honest recap with focused time, completion rating, reflection, and suggested ScholarOS stars.
-- Save school-related unblock requests for the future parent-approval interface.
+- Require a reason for school-related access, then approve a five-minute exception or deny it from ScholarOS.
+- Restore blocking automatically when an approved exception expires or the focus session ends.
 - Start and stop sessions directly from ScholarOS.
 - Use ScholarOS classes as subject suggestions in the extension.
 - Sync completed sessions, captures, access requests, and earned study stars into the active ScholarOS account.
 - Queue versioned, idempotent events while ScholarOS is closed, then acknowledge them after the dashboard saves them.
 - Relay explicit Alexa commands from the authorized ScholarOS page to the authenticated localhost bridge.
+- Start Scholar Mode's ranked task and focus duration through the authenticated ScholarOS command bridge.
 - Export all local extension data as JSON.
 
-PDF-specific capture, AI flashcards, daily cross-browser screen-time limits, and parent approval decisions are deliberately deferred.
+PDF-specific capture, AI-generated flashcards, and daily cross-browser screen-time budgets remain deferred. ScholarOS now provides local manual/voice flashcards and per-session access decisions without a cloud AI service.
 
 ## Install for local development
 
@@ -64,6 +66,8 @@ Study data stays in `chrome.storage.local` and the selected ScholarOS profile's 
 - `tabs` and website access: send capture and session-state messages to normal webpages.
 
 The extension records only explicit captures, session metadata, configured blocked domains, and the count/domain of blocked attempts. It does not store general browsing history.
+
+Temporary site allowances are scoped to the active focus session, expire after at most 30 minutes (the ScholarOS UI grants five), and are cleared when the session ends. The extension stores the reason and decision with the local request history so the gate remains understandable.
 
 The Alexa pairing token is stored only in the extension's private `chrome.storage.local` area so it can authenticate after restart. ScholarOS never receives it, exports redact it, and Alexa commands are accepted only from the exact configured dashboard. Amazon credentials remain solely in the separate local `alexainit` process. Device/routine names and spoken text are not added to extension exports or ScholarOS storage.
 

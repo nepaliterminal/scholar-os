@@ -184,6 +184,28 @@
   .alexa-log-item strong { font-size: .8rem; }
   .alexa-log-item span, .alexa-log-item time { color: var(--muted); font-size: .68rem; }
   .alexa-log-item .failed { color: #a45e4c; }
+  .scholar-next { margin-top: 11px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+  .scholar-next strong { display: block; font-family: "Fraunces", Georgia, serif; font-size: 1.05rem; }
+  .scholar-next span { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; }
+  .scholar-mode-status { min-height: 19px; margin-top: 9px; color: var(--good); font-size: .74rem; font-weight: 700; }
+  .memory-grid { display: grid; gap: 9px; margin-top: 11px; }
+  .memory-input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; color: var(--ink); background: #fff; font: inherit; font-size: .82rem; }
+  textarea.memory-input { min-height: 82px; resize: vertical; }
+  .memory-list { display: grid; gap: 8px; margin-top: 12px; }
+  .memory-item { position: relative; padding: 10px 34px 10px 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .memory-item strong, .memory-item span { display: block; }
+  .memory-item strong { font-size: .79rem; }
+  .memory-item span { margin-top: 3px; color: var(--muted); font-size: .71rem; }
+  .memory-delete { position: absolute; top: 7px; right: 7px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 1rem; }
+  .quiz-card { min-height: 112px; margin-top: 11px; padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); }
+  .quiz-card span { display: block; color: var(--muted); font-size: .67rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .quiz-card strong { display: block; margin-top: 6px; font-family: "Fraunces", Georgia, serif; font-size: 1.05rem; }
+  .quiz-answer { margin-top: 10px; color: var(--good); font-size: .8rem; font-weight: 700; }
+  .request-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .request-actions button, .capture-card-btn { border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; color: var(--accent); background: #fff; cursor: pointer; font: inherit; font-size: .68rem; font-weight: 750; }
+  .request-actions button:first-child { color: #fff; border-color: var(--good); background: var(--good); }
+  .capture-card-btn { margin-top: 8px; }
+  .privacy-strip { margin-top: 20px; padding: 11px 13px; border-radius: 11px; color: var(--muted); background: var(--soft); font-size: .74rem; }
   @media (max-width: 520px) {
     .alexa-home-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .alexa-home-actions .alexa-button:last-child { grid-column: 1 / -1; }
@@ -514,6 +536,22 @@
         </div>
       </div>
 
+      <div class="card">
+        <h2>🧭 Scholar Mode</h2>
+        <p class="study-note">One button chooses the most useful next task, starts focus protection, and can announce it on Alexa.</p>
+        <div class="scholar-next">
+          <strong id="scholarNextTask">Loading your next task…</strong>
+          <span id="scholarNextReason"></span>
+        </div>
+        <div class="alexa-button-row">
+          <button class="alexa-button primary" id="scholarAutopilotBtn" type="button">Start Focus Autopilot</button>
+          <button class="alexa-button" id="scholarNextAlexaBtn" type="button">Ask Alexa what’s next</button>
+          <button class="alexa-button" id="scholarMorningBtn" type="button">Morning check</button>
+          <button class="alexa-button" id="scholarUnstuckBtn" type="button">Help me get unstuck</button>
+        </div>
+        <div class="scholar-mode-status" id="scholarModeStatus" role="status"></div>
+      </div>
+
       <div class="card" id="starsCard">
         <h2>⭐ My Stars &amp; Rewards</h2>
         <div class="stars-balance"><span id="starsCount">0</span> ⭐ <span class="stars-sub">earned</span></div>
@@ -666,6 +704,65 @@
     </div>
     <div class="hub-grid two" style="margin-top:20px">
       <div class="card">
+        <h2>🧭 Scholar Mode Coach</h2>
+        <p class="study-note">ScholarOS ranks deadlines, priority, in-progress work, tests, and open to-dos locally.</p>
+        <div class="scholar-next">
+          <strong id="scholarHubNextTask">Loading your next task…</strong>
+          <span id="scholarHubNextReason"></span>
+        </div>
+        <div class="alexa-button-row">
+          <button class="alexa-button primary" id="scholarHubAutopilotBtn" type="button">Start Autopilot</button>
+          <button class="alexa-button" id="scholarHubNextAlexaBtn" type="button">Tell me what’s next</button>
+          <button class="alexa-button" id="scholarHubMorningBtn" type="button">Backpack + deadlines</button>
+          <button class="alexa-button" id="scholarHubUnstuckBtn" type="button">Give me a hint</button>
+        </div>
+        <p class="scholar-mode-status" id="scholarHubStatus" role="status"></p>
+      </div>
+      <div class="card">
+        <h2>🎙 Private Voice Notes</h2>
+        <p class="study-note">Dictation uses this browser’s microphone. Notes and flashcards stay in this ScholarOS profile.</p>
+        <div class="memory-grid">
+          <select class="memory-input" id="memoryType" aria-label="Memory type">
+            <option value="note">Study note</option>
+            <option value="flashcard">Flashcard</option>
+          </select>
+          <input class="memory-input" id="memoryPrompt" maxlength="300" placeholder="Note title or flashcard question">
+          <textarea class="memory-input" id="memoryDetails" maxlength="2000" placeholder="Note details or flashcard answer"></textarea>
+        </div>
+        <div class="alexa-button-row">
+          <button class="alexa-button" id="dictatePromptBtn" type="button">🎙 Dictate title/question</button>
+          <button class="alexa-button" id="dictateDetailsBtn" type="button">🎙 Dictate details/answer</button>
+          <button class="alexa-button primary" id="saveMemoryBtn" type="button">Save locally</button>
+        </div>
+        <p class="scholar-mode-status" id="memoryStatus" role="status"></p>
+      </div>
+    </div>
+    <div class="hub-grid two" style="margin-top:20px">
+      <div class="card">
+        <div class="study-card-heading"><h2>🧠 Alexa Quiz</h2><span id="quizStats">0 cards</span></div>
+        <p class="study-note">Alexa asks the question; you can answer aloud through the browser or reveal it yourself.</p>
+        <div class="quiz-card">
+          <span>Question</span>
+          <strong id="quizQuestion">Save a flashcard to start a quiz.</strong>
+          <div class="quiz-answer" id="quizAnswer" hidden></div>
+        </div>
+        <div class="alexa-button-row">
+          <button class="alexa-button primary" id="quizAskAlexaBtn" type="button">Ask on Alexa</button>
+          <button class="alexa-button" id="quizVoiceAnswerBtn" type="button">🎙 Answer aloud</button>
+          <button class="alexa-button" id="quizRevealBtn" type="button">Show answer</button>
+          <button class="alexa-button" id="quizCorrectBtn" type="button">Got it</button>
+          <button class="alexa-button" id="quizAgainBtn" type="button">Practice again</button>
+        </div>
+        <p class="scholar-mode-status" id="quizStatus" role="status"></p>
+      </div>
+      <div class="card">
+        <h2>📚 Local Study Memory</h2>
+        <p class="study-note">Turn extension captures into flashcards, review saved notes, or remove anything here.</p>
+        <div class="memory-list" id="memoryList"></div>
+      </div>
+    </div>
+    <div class="hub-grid two" style="margin-top:20px">
+      <div class="card">
         <h2>Say Something</h2>
         <label class="alexa-field"><span>Message</span><textarea class="alexa-text" id="alexaMessage" maxlength="250" placeholder="Time to start the next useful step."></textarea></label>
         <div class="alexa-button-row">
@@ -692,6 +789,7 @@
       <h2>Actions in This Tab</h2>
       <div class="alexa-log" id="alexaActionLog"></div>
     </div>
+    <p class="privacy-strip">Privacy: ScholarOS ranking, notes, flashcards, quiz scores, backpack status, and access decisions stay in this browser. Only the short sentence attached to a button you press is sent to Alexa.</p>
   </section>
 
   <section class="hub" id="hub-academics">
@@ -822,6 +920,9 @@ const DEFAULTS = {
   studyRequests: [],
   studyEventIds: [],
   studyStarredSessionIds: [],
+  studyNotes: [],
+  flashcards: [],
+  quizStats: { correct: 0, again: 0 },
   rewards: [
     { name: "30 min extra screen time", cost: 10 },
     { name: "Pick what's for dessert", cost: 15 },
@@ -870,6 +971,9 @@ function loadState(name) {
   S.studyRequests ??= [];
   S.studyEventIds ??= [];
   S.studyStarredSessionIds ??= [];
+  S.studyNotes ??= [];
+  S.flashcards ??= [];
+  S.quizStats ??= { correct: 0, again: 0 };
   // Remove fields from pre-release Alexa builds that persisted Alexa metadata.
   delete S.alexaActions;
   delete S.settings.alexaDeviceId;
@@ -1000,6 +1104,10 @@ let alexaSelectedDeviceId = "";
 let alexaRequestNumber = 0;
 const pendingAlexaRequests = new Map();
 const alexaActionHistory = [];
+let scholarUnstuckLevel = 0;
+let quizIndex = 0;
+let quizRevealed = false;
+const dictatedMemoryFields = new Set();
 
 function postToStudyExtension(message) {
   window.postMessage({ source: "scholar-os", version: 1, ...message }, "*");
@@ -1128,6 +1236,8 @@ function renderAlexaControls(loading = false) {
   $("alexaActionLog").innerHTML = alexaActionHistory.length
     ? alexaActionHistory.map(item => `<article class="alexa-log-item"><strong>${esc(item.action)}</strong><time>${esc(item.when)}</time><span class="${item.ok ? "" : "failed"}">${item.ok ? "Sent" : "Failed"}</span></article>`).join("")
     : '<p class="study-empty">No actions in this tab yet. Alexa history is cleared when you close or reload it.</p>';
+  renderScholarMode();
+  renderStudyMemory();
 }
 
 function recordAlexaAction(action, ok) {
@@ -1143,18 +1253,21 @@ async function runAlexaCommand(command, actionLabel) {
   const deviceId = currentAlexaDeviceId();
   if (!deviceId) {
     $("alexaCommandNote").textContent = "Connect the private bridge and choose an Alexa device first.";
-    return;
+    return false;
   }
   $("alexaCommandNote").textContent = "Sending through the private local bridge…";
   try {
     await sendAlexaRequest("command", { ...command, deviceId });
     recordAlexaAction(actionLabel, true);
     $("alexaCommandNote").textContent = "Sent. No message, device name, or routine name was saved by ScholarOS.";
+    renderAlexaControls();
+    return true;
   } catch (error) {
     recordAlexaAction(actionLabel, false);
     $("alexaCommandNote").textContent = error.message;
+    renderAlexaControls();
+    return false;
   }
-  renderAlexaControls();
 }
 
 function alexaFocusText() {
@@ -1171,6 +1284,301 @@ function alexaPlanText() {
   const openTodos = S.todos.filter(item => !item.done).slice(0, 3).map(item => item.txt);
   const tasks = [...openAssignments, ...openTodos].slice(0, 4);
   return (tasks.length ? `Today's plan: ${tasks.join(". ")}.` : "Today's Scholar OS plan is clear. Nice work.").slice(0, 250);
+}
+
+function daysUntilScholarDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return null;
+  const due = new Date(`${value}T12:00:00`);
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
+  return Math.round((due - start) / 86400000);
+}
+
+function scholarUrgencyScore(days) {
+  if (days === null) return 45;
+  if (days < 0) return -100 + days;
+  if (days === 0) return -80;
+  if (days === 1) return -60;
+  if (days <= 3) return -40 + days * 4;
+  if (days <= 7) return -20 + days * 3;
+  return 30 + Math.min(days, 60);
+}
+
+function scholarDuePhrase(days) {
+  if (days === null) return "with no deadline";
+  if (days < 0) return `${Math.abs(days)} day${days === -1 ? "" : "s"} overdue`;
+  if (days === 0) return "due today";
+  if (days === 1) return "due tomorrow";
+  return `due in ${days} days`;
+}
+
+function scholarTaskCandidates() {
+  if (!S) return [];
+  const priorityBonus = { High: -16, Medium: -8, Low: 0 };
+  const assignments = S.assignments.filter(item => item.status !== "Completed").map((item, index) => {
+    const days = daysUntilScholarDate(item.due);
+    const score = scholarUrgencyScore(days) + (priorityBonus[item.priority] || 0) + (/progress/i.test(item.status) ? -4 : 0) + index / 100;
+    const duration = item.type === "Project" && (days === null || days > 1) ? 45 : days !== null && days <= 0 ? 25 : 25;
+    return {
+      id: `assignment:${index}`,
+      kind: "assignment",
+      title: String(item.name || "Assignment"),
+      subject: String(item.cls || "General study"),
+      type: String(item.type || "Assignment"),
+      days,
+      score,
+      duration,
+      why: `${item.priority || "Normal"} priority · ${scholarDuePhrase(days)}${/progress/i.test(item.status) ? " · already started" : ""}`,
+    };
+  });
+  const exams = S.exams.filter(item => item.score === "—" || item.score === "" || item.score == null).map((item, index) => {
+    const days = daysUntilScholarDate(item.date);
+    return {
+      id: `exam:${index}`,
+      kind: "exam",
+      title: `Study for ${String(item.name || "test")}`,
+      subject: String(item.cls || "General study"),
+      type: "Study",
+      days,
+      score: scholarUrgencyScore(days) + 3 + index / 100,
+      duration: days !== null && days <= 3 ? 25 : 15,
+      why: `Test prep · ${scholarDuePhrase(days)}`,
+    };
+  });
+  const todos = S.todos.filter(item => !item.done).map((item, index) => ({
+    id: `todo:${index}`,
+    kind: "todo",
+    title: String(item.txt || "Open to-do"),
+    subject: String(item.tag || "General study"),
+    type: "To-do",
+    days: null,
+    score: 12 + index,
+    duration: 15,
+    why: `${item.tag ? `${item.tag} · ` : ""}open to-do with no deadline`,
+  }));
+  return [...assignments, ...exams, ...todos].sort((a, b) => a.score - b.score || a.title.localeCompare(b.title));
+}
+
+function nextScholarTask() {
+  return scholarTaskCandidates()[0] || null;
+}
+
+function scholarFirstStep(task) {
+  if (!task) return "Choose one small useful action.";
+  if (task.kind === "exam") return "Open your notes and list the three topics you need to review.";
+  if (/project/i.test(task.type)) return "Open the instructions and choose one small part you can finish first.";
+  if (task.kind === "assignment") return "Open the assignment and complete the first unfinished question or section.";
+  return "Name the first physical action, then do only that for two minutes.";
+}
+
+function nextScholarSpeech(task = nextScholarTask()) {
+  if (!task) return "Your Scholar OS list is clear. Pick something you want to learn or take a break.";
+  return `Next, work on ${task.title} for ${task.subject}. ${task.why}. ${scholarFirstStep(task)}`.slice(0, 250);
+}
+
+function scholarMorningText() {
+  if (!S) return "Open Scholar OS for your morning check.";
+  const backpack = todayBackpack();
+  const unpacked = S.backpack.filter((_, index) => !backpack[index]).map(item => String(item).replace(/^[^\p{L}\p{N}]+/u, "").trim()).slice(0, 3);
+  const soon = scholarTaskCandidates().filter(task => task.days !== null && task.days <= 3).slice(0, 3);
+  const packText = unpacked.length ? `Still pack: ${unpacked.join(", ")}.` : "Your backpack is packed.";
+  const dueText = soon.length ? `Coming up: ${soon.map(task => `${task.title}, ${scholarDuePhrase(task.days)}`).join(". ")}.` : "Nothing is due in the next three days.";
+  return `${packText} ${dueText}`.slice(0, 250);
+}
+
+function scholarHint(task = nextScholarTask(), level = 0) {
+  if (!task) return "Your list is clear. Write down one thing you are curious about.";
+  const hints = [
+    scholarFirstStep(task),
+    `Shrink ${task.title} to a two-minute move: open what you need and write, solve, or organize just one piece.`,
+    `Without looking for the answer, write what you already know, what the question is asking, and the exact point where you got stuck.`,
+  ];
+  return hints[level % hints.length].slice(0, 250);
+}
+
+function setScholarModeStatus(text) {
+  $("scholarModeStatus").textContent = text;
+  $("scholarHubStatus").textContent = text;
+}
+
+function renderScholarMode() {
+  if (!S) return;
+  const task = nextScholarTask();
+  const title = task ? task.title : "Everything important is clear";
+  const reason = task ? `${task.subject} · ${task.why} · ${task.duration} min focus` : "No open assignment, test, or to-do needs attention.";
+  for (const id of ["scholarNextTask", "scholarHubNextTask"]) $(id).textContent = title;
+  for (const id of ["scholarNextReason", "scholarHubNextReason"]) $(id).textContent = reason;
+  const alexaReady = studyExtensionAvailable && alexaBridgeState.connected && Boolean(currentAlexaDeviceId());
+  const focusRunning = Boolean(studyExtensionState.current);
+  for (const id of ["scholarAutopilotBtn", "scholarHubAutopilotBtn"]) {
+    $(id).disabled = !task || !studyExtensionAvailable || focusRunning;
+    $(id).textContent = focusRunning ? "Focus already running" : "Start Focus Autopilot";
+  }
+  for (const id of ["scholarNextAlexaBtn", "scholarHubNextAlexaBtn", "scholarMorningBtn", "scholarHubMorningBtn"]) {
+    $(id).disabled = !alexaReady;
+  }
+  for (const id of ["scholarUnstuckBtn", "scholarHubUnstuckBtn"]) $(id).disabled = !task;
+}
+
+async function startScholarAutopilot() {
+  const task = nextScholarTask();
+  if (!task) { setScholarModeStatus("Your list is clear—there is nothing to auto-start."); return; }
+  if (studyExtensionState.current) { setScholarModeStatus("Finish the current focus session first."); return; }
+  setScholarModeStatus(`Starting ${task.duration} minutes for ${task.title}…`);
+  try {
+    const session = await sendStudyCommand("startSession", {
+      session: { subject: task.subject, intention: task.title, durationMinutes: task.duration },
+    });
+    studyExtensionState.current = session;
+    scholarUnstuckLevel = 0;
+    renderStudyLauncher();
+    renderScholarMode();
+    if (alexaBridgeState.connected && currentAlexaDeviceId()) {
+      await runAlexaCommand({ action: "announce", text: `Scholar Mode started. ${nextScholarSpeech(task)}`.slice(0, 250) }, "Focus Autopilot");
+      setScholarModeStatus(`Focus protection is on for ${task.title}, and Alexa announced it.`);
+    } else {
+      setScholarModeStatus(`Focus protection is on for ${task.title}. Connect Alexa if you also want an announcement.`);
+    }
+  } catch (error) {
+    setScholarModeStatus(error.message);
+    renderScholarMode();
+  }
+}
+
+async function speakScholarText(text, label) {
+  if (!alexaBridgeState.connected || !currentAlexaDeviceId()) {
+    setScholarModeStatus(text);
+    return false;
+  }
+  const ok = await runAlexaCommand({ action: "speak", text: text.slice(0, 250) }, label);
+  setScholarModeStatus(ok ? `Sent to Alexa: ${text}` : "Alexa could not speak that update.");
+  return ok;
+}
+
+function currentQuizCard() {
+  if (!S?.flashcards?.length) return null;
+  quizIndex = ((quizIndex % S.flashcards.length) + S.flashcards.length) % S.flashcards.length;
+  return S.flashcards[quizIndex];
+}
+
+function renderStudyMemory() {
+  if (!S) return;
+  const card = currentQuizCard();
+  $("quizQuestion").textContent = card?.question || "Save a flashcard to start a quiz.";
+  $("quizAnswer").textContent = card ? `Answer: ${card.answer}` : "";
+  $("quizAnswer").hidden = !card || !quizRevealed;
+  $("quizStats").textContent = `${S.flashcards.length} card${S.flashcards.length === 1 ? "" : "s"} · ${S.quizStats.correct || 0} got it · ${S.quizStats.again || 0} again`;
+  const alexaReady = studyExtensionAvailable && alexaBridgeState.connected && Boolean(currentAlexaDeviceId());
+  $("quizAskAlexaBtn").disabled = !card || !alexaReady;
+  $("quizVoiceAnswerBtn").disabled = !card || !(window.SpeechRecognition || window.webkitSpeechRecognition);
+  for (const id of ["quizRevealBtn", "quizCorrectBtn", "quizAgainBtn"]) $(id).disabled = !card;
+
+  const memories = [
+    ...S.flashcards.map(item => ({ ...item, memoryType: "flashcard", heading: item.question, details: item.answer })),
+    ...S.studyNotes.map(item => ({ ...item, memoryType: "note", heading: item.title, details: item.text })),
+  ].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 10);
+  $("memoryList").innerHTML = memories.length
+    ? memories.map(item => `<article class="memory-item">
+        <strong>${item.memoryType === "flashcard" ? "🧠" : "📝"} ${esc(item.heading || "Untitled")}</strong>
+        <span>${esc(item.details || "")}</span>
+        <button class="memory-delete" data-memory-type="${item.memoryType}" data-memory-id="${esc(item.id)}" aria-label="Delete">×</button>
+      </article>`).join("")
+    : '<p class="study-empty">No local notes or flashcards yet.</p>';
+}
+
+function listenOnce(statusElement) {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) return Promise.reject(new Error("Voice dictation is not available in this browser."));
+  return new Promise((resolve, reject) => {
+    const recognition = new Recognition();
+    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => { statusElement.textContent = "Listening…"; };
+    recognition.onresult = event => resolve(String(event.results?.[0]?.[0]?.transcript || "").trim());
+    recognition.onerror = event => reject(new Error(event.error === "not-allowed" ? "Microphone permission was not allowed." : "I could not hear that clearly. Try again."));
+    recognition.onnomatch = () => reject(new Error("I could not hear that clearly. Try again."));
+    recognition.start();
+  });
+}
+
+async function dictateMemoryField(fieldId) {
+  const status = $("memoryStatus");
+  try {
+    const transcript = await listenOnce(status);
+    const field = $(fieldId);
+    field.value = `${field.value}${field.value ? " " : ""}${transcript}`.slice(0, Number(field.maxLength) || 2000);
+    dictatedMemoryFields.add(fieldId);
+    status.textContent = "Dictation added. Review it, then save locally.";
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+function saveStudyMemory() {
+  const type = $("memoryType").value;
+  const prompt = $("memoryPrompt").value.trim();
+  const details = $("memoryDetails").value.trim();
+  if (!details || (type === "flashcard" && !prompt)) {
+    $("memoryStatus").textContent = type === "flashcard" ? "Add both a question and an answer." : "Add note details first.";
+    return;
+  }
+  const item = {
+    id: `memory_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    dictated: dictatedMemoryFields.size > 0,
+  };
+  if (type === "flashcard") {
+    S.flashcards.unshift({ ...item, question: prompt.slice(0, 300), answer: details.slice(0, 2000) });
+    S.flashcards = S.flashcards.slice(0, 500);
+    quizIndex = 0;
+    quizRevealed = false;
+  } else {
+    S.studyNotes.unshift({ ...item, title: (prompt || "Study note").slice(0, 300), text: details.slice(0, 2000) });
+    S.studyNotes = S.studyNotes.slice(0, 500);
+  }
+  save();
+  $("memoryPrompt").value = "";
+  $("memoryDetails").value = "";
+  dictatedMemoryFields.clear();
+  $("memoryStatus").textContent = `${type === "flashcard" ? "Flashcard" : "Note"} saved only in this ScholarOS profile.`;
+  renderStudyMemory();
+}
+
+function prepareCaptureFlashcard(captureId) {
+  const capture = S.studyCaptures.find(item => item.id === captureId);
+  if (!capture) return;
+  const source = capture.title || capture.subject || "this capture";
+  $("memoryType").value = "flashcard";
+  $("memoryPrompt").value = `What should you remember from ${String(source).slice(0, 220)}?`;
+  $("memoryDetails").value = String(capture.note || capture.quote || "").slice(0, 2000);
+  $("memoryStatus").textContent = "Flashcard draft created from your capture. Review it, then save locally.";
+  location.hash = "hub-alexa";
+  $("memoryPrompt").focus();
+}
+
+function answerMatches(spoken, expected) {
+  const normalize = value => String(value || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const heard = normalize(spoken);
+  const answer = normalize(expected);
+  if (!heard || !answer) return false;
+  if (heard.includes(answer) || answer.includes(heard)) return true;
+  const ignored = new Set(["a", "an", "and", "are", "is", "of", "the", "to"]);
+  const expectedWords = [...new Set(answer.split(" ").filter(word => word.length > 1 && !ignored.has(word)))];
+  const heardWords = new Set(heard.split(" "));
+  const matches = expectedWords.filter(word => heardWords.has(word)).length;
+  return expectedWords.length > 0 && matches / expectedWords.length >= 0.65;
+}
+
+function advanceQuiz(correct) {
+  if (!currentQuizCard()) return;
+  if (correct) S.quizStats.correct = (S.quizStats.correct || 0) + 1;
+  else S.quizStats.again = (S.quizStats.again || 0) + 1;
+  save();
+  quizIndex = (quizIndex + 1) % S.flashcards.length;
+  quizRevealed = false;
+  $("quizStatus").textContent = correct ? "Nice—moving to the next card." : "Saved for more practice—here is the next card.";
+  renderStudyMemory();
 }
 
 function requestStudySync() {
@@ -1357,6 +1765,7 @@ function renderStudyData() {
         <strong>${capture.kind === "note" ? "✎ Note" : "▰ Highlight"} · ${esc(capture.subject || "Study")}</strong>
         <p>${esc(capture.note || capture.quote || "Saved capture")}</p>
         <small>${esc(capture.title || "Untitled source")}${Number.isFinite(capture.timestampSeconds) ? ` · ${Math.floor(capture.timestampSeconds / 60)}:${String(capture.timestampSeconds % 60).padStart(2, "0")}` : ""}</small>
+        <button class="capture-card-btn" type="button" data-capture-card="${esc(capture.id)}">Make flashcard draft</button>
       </article>`).join("")
     : '<p class="study-empty">Highlights and notes from the extension will appear here.</p>';
 
@@ -1365,6 +1774,10 @@ function renderStudyData() {
         <strong>${esc(request.site || "Blocked site")} · ${esc(request.status || "pending")}</strong>
         <p>${esc(request.reason || "No reason provided")}</p>
         <small>${esc(request.subject || "Study session")} · ${studyDate(request.createdAt)}</small>
+        ${request.status === "pending" ? `<div class="request-actions">
+          <button type="button" data-request-decision="approve" data-request-id="${esc(request.id)}">Allow 5 minutes</button>
+          <button type="button" data-request-decision="deny" data-request-id="${esc(request.id)}">Deny</button>
+        </div>` : request.status === "approved" && request.allowedUntil ? `<small>Allowed until ${new Date(request.allowedUntil).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small>` : ""}
       </article>`).join("")
     : '<p class="study-empty">No access requests are waiting.</p>';
 }
@@ -1420,6 +1833,13 @@ function processStudyEvents(events) {
       if (!S.studyRequests.some(request => request.id === payload.id)) {
         S.studyRequests = [{ ...payload }, ...S.studyRequests].slice(0, 200);
       }
+    } else if (event.type === "unblock.resolved" && payload.id) {
+      const request = S.studyRequests.find(item => item.id === payload.id);
+      if (request) {
+        request.status = payload.status === "approved" ? "approved" : "denied";
+        request.resolvedAt = payload.resolvedAt || event.occurredAt;
+        request.allowedUntil = payload.allowedUntil || null;
+      }
     }
 
     processed.add(event.id);
@@ -1473,6 +1893,35 @@ $("studySettingsBtn").onclick = () => {
   sendStudyCommand("openOptions").catch(error => { $("studyNote").textContent = error.message; });
 };
 
+$("studyCaptureList").addEventListener("click", event => {
+  const button = event.target.closest("[data-capture-card]");
+  if (button) prepareCaptureFlashcard(button.dataset.captureCard);
+});
+
+$("studyRequestList").addEventListener("click", async event => {
+  const button = event.target.closest("[data-request-decision]");
+  if (!button) return;
+  const requestId = button.dataset.requestId;
+  const decision = button.dataset.requestDecision;
+  button.closest(".request-actions").querySelectorAll("button").forEach(item => { item.disabled = true; });
+  try {
+    const resolved = await sendStudyCommand("resolveUnblock", { request: { requestId, decision, minutes: 5 } });
+    const request = S.studyRequests.find(item => item.id === requestId);
+    if (request) {
+      request.status = resolved.status;
+      request.allowedUntil = resolved.allowedUntil || null;
+      request.resolvedAt = new Date().toISOString();
+      save();
+    }
+    renderStudyData();
+    setScholarModeStatus(decision === "approve" ? `${resolved.site} is available for up to 5 minutes.` : `Access to ${resolved.site} was denied.`);
+    requestStudySync();
+  } catch (error) {
+    setScholarModeStatus(error.message);
+    renderStudyData();
+  }
+});
+
 $("alexaDevice").onchange = event => {
   const selected = String(event.target.value || "");
   alexaSelectedDeviceId = alexaBridgeState.devices.some(device => device.id === selected) ? selected : "";
@@ -1506,6 +1955,61 @@ $("alexaRoutineBtn").onclick = () => {
   const routineId = $("alexaRoutine").value;
   if (!routineId) { $("alexaCommandNote").textContent = "Choose a routine first."; return; }
   runAlexaCommand({ action: "routine", routineId }, "Routine started");
+};
+
+for (const id of ["scholarAutopilotBtn", "scholarHubAutopilotBtn"]) $(id).onclick = startScholarAutopilot;
+for (const id of ["scholarNextAlexaBtn", "scholarHubNextAlexaBtn"]) {
+  $(id).onclick = () => speakScholarText(nextScholarSpeech(), "Next task");
+}
+for (const id of ["scholarMorningBtn", "scholarHubMorningBtn"]) {
+  $(id).onclick = () => speakScholarText(scholarMorningText(), "Morning check");
+}
+for (const id of ["scholarUnstuckBtn", "scholarHubUnstuckBtn"]) {
+  $(id).onclick = () => {
+    const hint = scholarHint(nextScholarTask(), scholarUnstuckLevel++);
+    speakScholarText(hint, "Unstuck hint");
+  };
+}
+
+$("dictatePromptBtn").onclick = () => dictateMemoryField("memoryPrompt");
+$("dictateDetailsBtn").onclick = () => dictateMemoryField("memoryDetails");
+$("saveMemoryBtn").onclick = saveStudyMemory;
+$("memoryType").onchange = () => {
+  const flashcard = $("memoryType").value === "flashcard";
+  $("memoryPrompt").placeholder = flashcard ? "Flashcard question" : "Note title (optional)";
+  $("memoryDetails").placeholder = flashcard ? "Flashcard answer" : "Study note details";
+};
+$("memoryList").addEventListener("click", event => {
+  const button = event.target.closest("[data-memory-id]");
+  if (!button) return;
+  const key = button.dataset.memoryType === "flashcard" ? "flashcards" : "studyNotes";
+  S[key] = S[key].filter(item => item.id !== button.dataset.memoryId);
+  quizIndex = 0;
+  quizRevealed = false;
+  save();
+  renderStudyMemory();
+});
+
+$("quizAskAlexaBtn").onclick = () => {
+  const card = currentQuizCard();
+  if (card) runAlexaCommand({ action: "speak", text: `Quiz question. ${card.question}`.slice(0, 250) }, "Quiz question");
+};
+$("quizRevealBtn").onclick = () => { quizRevealed = true; renderStudyMemory(); };
+$("quizCorrectBtn").onclick = () => advanceQuiz(true);
+$("quizAgainBtn").onclick = () => advanceQuiz(false);
+$("quizVoiceAnswerBtn").onclick = async () => {
+  const card = currentQuizCard();
+  if (!card) return;
+  try {
+    const transcript = await listenOnce($("quizStatus"));
+    if (answerMatches(transcript, card.answer)) {
+      advanceQuiz(true);
+    } else {
+      $("quizStatus").textContent = `I heard “${transcript.slice(0, 120)}.” That did not match yet—try again or reveal the answer.`;
+    }
+  } catch (error) {
+    $("quizStatus").textContent = error.message;
+  }
 };
 
 window.addEventListener("message", event => {
@@ -1641,7 +2145,7 @@ document.addEventListener("input", e => {
     if (t === "assignments" && f === "status" && !/complete/i.test(String(old)) && /complete/i.test(String(v))) {
       awardStars(5, "+5 ⭐ for finishing homework!");
     }
-    save(); renderDerived();
+    save(); renderDerived(); renderScholarMode();
     return;
   }
   const el = e.target.closest("[data-edit-text]");
@@ -1656,13 +2160,13 @@ document.addEventListener("input", e => {
 document.addEventListener("click", e => {
   if (!S) return;
   const del = e.target.closest("[data-del-t]");
-  if (del) { S[del.dataset.delT].splice(+del.dataset.delR, 1); save(); renderTables(); renderDerived(); return; }
+  if (del) { S[del.dataset.delT].splice(+del.dataset.delR, 1); save(); renderTables(); renderDerived(); renderScholarMode(); return; }
   const add = e.target.closest("[data-add]");
   if (add) {
     const key = add.dataset.add;
     const blank = {};
     TABLES[key].cols.forEach(([, f]) => { if (f !== "_bar") blank[f] = ""; });
-    S[key].push(blank); save(); renderTables();
+    S[key].push(blank); save(); renderTables(); renderScholarMode();
   }
 });
 
@@ -1844,19 +2348,19 @@ $("todoList").addEventListener("change", e => {
   const cb = e.target.closest("[data-todo-check]");
   if (!cb) return;
   S.todos[+cb.dataset.todoCheck].done = cb.checked;
-  save(); renderTodos();
+  save(); renderTodos(); renderScholarMode();
   awardStars(cb.checked ? 2 : -2, cb.checked ? "+2 ⭐ for finishing a task!" : null);
 });
 $("todoList").addEventListener("click", e => {
   const del = e.target.closest("[data-todo-del]");
-  if (del) { S.todos.splice(+del.dataset.todoDel, 1); save(); renderTodos(); }
+  if (del) { S.todos.splice(+del.dataset.todoDel, 1); save(); renderTodos(); renderScholarMode(); }
 });
 function addTodo() {
   const v = $("todoInput").value.trim();
   if (!v) return;
   S.todos.push({ txt: v, tag: $("todoTagInput").value.trim(), done: false });
   $("todoInput").value = ""; $("todoTagInput").value = "";
-  save(); renderTodos();
+  save(); renderTodos(); renderScholarMode();
 }
 $("todoAddBtn").onclick = addTodo;
 $("todoInput").addEventListener("keydown", e => { if (e.key === "Enter") addTodo(); });
