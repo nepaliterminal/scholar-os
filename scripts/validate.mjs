@@ -21,6 +21,11 @@ for (const id of [
   'studySubjectBreakdown',
   'studyCaptureList',
   'studyRequestList',
+  'alexaConnection',
+  'alexaDevice',
+  'alexaMessage',
+  'alexaRoutine',
+  'alexaActionLog',
 ]) {
   assert.ok(ids.includes(id), `missing ScholarOS integration element #${id}`);
 }
@@ -32,6 +37,8 @@ for (const marker of [
   'STUDYX_EVENTS',
   'studyEventIds',
   'studyStarredSessionIds',
+  'SCHOLAROS_ALEXA_REQUEST',
+  'STUDYX_ALEXA_RESULT',
 ]) {
   assert.ok(html.includes(marker), `missing bridge marker ${marker}`);
 }

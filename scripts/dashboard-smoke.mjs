@@ -123,11 +123,15 @@ try {
     account: window.ScholarOS.getSnapshot()?.account,
     subjectCount: document.querySelector('#studySubject').options.length,
     connectionText: document.querySelector('#studyConnection').innerText,
+    alexaText: document.querySelector('#alexaConnection').innerText,
+    alexaControlsDisabled: document.querySelector('#alexaSpeakBtn').disabled,
   })`);
   assert.equal(initial.overlayHidden, true);
   assert.equal(initial.account, 'Smoke Test');
   assert.ok(initial.subjectCount >= 1);
   assert.match(initial.connectionText, /Extension not detected/);
+  assert.match(initial.alexaText, /Extension not detected/);
+  assert.equal(initial.alexaControlsDisabled, true);
 
   const integration = await evaluate(`(() => {
     const completion = {
@@ -179,6 +183,34 @@ try {
   assert.equal(integration.focusStreak, '1 day');
   assert.match(integration.subjectAnalytics, /Science/);
   assert.match(integration.report, /Focus today: 25 min across 1 session/);
+
+  const alexaPrivacy = await evaluate(`(() => {
+    const privateDeviceName = 'Private Bedroom Echo';
+    const privateDeviceId = 'device_private_identifier';
+    const privateRoutineName = 'Private Morning Routine';
+    const privateRoutineId = 'routine_private_identifier';
+    const privateMessage = 'A private message that must never be stored';
+    alexaBridgeState = normalizeAlexaStatus({
+      connected: true,
+      devices: [{ id: privateDeviceId, name: privateDeviceName, online: true }],
+      routines: [{ id: privateRoutineId, name: privateRoutineName }],
+    });
+    alexaSelectedDeviceId = privateDeviceId;
+    document.querySelector('#alexaMessage').value = privateMessage;
+    renderAlexaControls();
+    const stored = Object.values(localStorage).join('\\n');
+    return {
+      deviceRendered: document.querySelector('#alexaDevice').innerText,
+      routineRendered: document.querySelector('#alexaRoutine').innerText,
+      leaked: [privateDeviceName, privateDeviceId, privateRoutineName, privateRoutineId, privateMessage]
+        .some(value => stored.includes(value)),
+      persistentAlexaHistory: stored.includes('alexaActions'),
+    };
+  })()`);
+  assert.match(alexaPrivacy.deviceRendered, /Private Bedroom Echo/);
+  assert.match(alexaPrivacy.routineRendered, /Private Morning Routine/);
+  assert.equal(alexaPrivacy.leaked, false, 'Alexa names, IDs, and message text must not enter localStorage');
+  assert.equal(alexaPrivacy.persistentAlexaHistory, false, 'Alexa action history must remain memory-only');
   assert.deepEqual(runtimeErrors, []);
 
   console.log(JSON.stringify({
@@ -186,6 +218,7 @@ try {
     accountMigration: true,
     eventSyncRendered: true,
     analyticsRendered: true,
+    alexaPersonalDataStayedInMemory: true,
     replaySafeStars: integration.stars,
     crossAccountEventHeld: true,
     runtimeErrors: runtimeErrors.length,

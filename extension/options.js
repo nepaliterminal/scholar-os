@@ -3,6 +3,21 @@
 const byId = (id) => document.getElementById(id);
 let allData = null;
 
+function settingsFromForm(extra = {}) {
+  return {
+    settingsVersion: 4,
+    defaultDuration: Number(byId('defaultDuration').value),
+    blockedSites: cleanSiteLines(),
+    youtubeShield: byId('youtubeShield').value,
+    hideYouTubeShorts: byId('hideYouTubeShorts').checked,
+    hideYouTubeRecommendations: byId('hideYouTubeRecommendations').checked,
+    scholarOsUrl: byId('scholarOsUrl').value.trim(),
+    alexaBridgeUrl: byId('alexaBridgeUrl').value.trim(),
+    alexaBridgeToken: byId('alexaBridgeToken').value.trim(),
+    ...extra,
+  };
+}
+
 async function send(type, extra = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...extra });
   if (!response?.ok) throw new Error(response?.error || 'Study Session OS did not respond.');
@@ -67,14 +82,25 @@ function renderRequests(requests) {
 
 async function load() {
   try {
-    allData = await send('studyx.getAllData');
-    const settings = allData.settings;
+    const [settings, exportedData] = await Promise.all([
+      send('studyx.getSettings'),
+      send('studyx.getAllData'),
+    ]);
+    allData = exportedData;
     byId('defaultDuration').value = settings.defaultDuration;
     byId('blockedSites').value = settings.blockedSites.join('\n');
     byId('youtubeShield').value = settings.youtubeShield;
     byId('hideYouTubeShorts').checked = settings.hideYouTubeShorts;
     byId('hideYouTubeRecommendations').checked = settings.hideYouTubeRecommendations;
     byId('scholarOsUrl').value = settings.scholarOsUrl;
+    byId('alexaBridgeUrl').value = settings.alexaBridgeUrl;
+    byId('alexaBridgeToken').value = '';
+    byId('alexaBridgeToken').placeholder = settings.alexaBridgePaired
+      ? 'Pairing saved privately'
+      : 'Run npm run bridge:pair in alexainit';
+    byId('alexaBridgeStatus').textContent = settings.alexaBridgePaired
+      ? 'A private pairing token is saved. Enter a new token only to replace it.'
+      : 'Not paired yet.';
     updateSiteCount();
     renderRequests(allData.unblockRequests || []);
   } catch (error) {
@@ -90,16 +116,10 @@ byId('settingsForm').addEventListener('submit', async (event) => {
   button.disabled = true;
   try {
     const settings = await send('studyx.saveSettings', {
-      settings: {
-        settingsVersion: 3,
-        defaultDuration: Number(byId('defaultDuration').value),
-        blockedSites: cleanSiteLines(),
-        youtubeShield: byId('youtubeShield').value,
-        hideYouTubeShorts: byId('hideYouTubeShorts').checked,
-        hideYouTubeRecommendations: byId('hideYouTubeRecommendations').checked,
-        scholarOsUrl: byId('scholarOsUrl').value.trim(),
-      },
+      settings: settingsFromForm(),
     });
+    byId('alexaBridgeToken').value = '';
+    byId('alexaBridgeToken').placeholder = settings.alexaBridgePaired ? 'Pairing saved privately' : 'Run npm run bridge:pair in alexainit';
     byId('blockedSites').value = settings.blockedSites.join('\n');
     updateSiteCount();
     showMessage('Settings saved. Active sessions use the new rules immediately.');
@@ -118,6 +138,35 @@ byId('clearRequests').addEventListener('click', async () => {
     showMessage('Access-request history cleared.');
   } catch (error) {
     showMessage(error.message, true);
+  }
+});
+
+byId('testAlexaBridge').addEventListener('click', async () => {
+  const target = byId('alexaBridgeStatus');
+  target.textContent = 'Testing local bridge…';
+  try {
+    await send('studyx.saveSettings', {
+      settings: settingsFromForm(),
+    });
+    byId('alexaBridgeToken').value = '';
+    byId('alexaBridgeToken').placeholder = 'Pairing saved privately';
+    const status = await send('studyx.alexaStatus');
+    target.textContent = `Connected · ${status.devices.length} device(s) · ${status.routines.length} routine(s)`;
+  } catch (error) {
+    target.textContent = error.message;
+  }
+});
+
+byId('forgetAlexaPairing').addEventListener('click', async () => {
+  if (!confirm('Forget the saved Alexa bridge pairing on this Chrome profile?')) return;
+  const target = byId('alexaBridgeStatus');
+  try {
+    await send('studyx.saveSettings', { settings: settingsFromForm({ clearAlexaBridgeToken: true, alexaBridgeToken: '' }) });
+    byId('alexaBridgeToken').value = '';
+    byId('alexaBridgeToken').placeholder = 'Run npm run bridge:pair in alexainit';
+    target.textContent = 'Pairing forgotten. Amazon login data on the local bridge was not changed.';
+  } catch (error) {
+    target.textContent = error.message;
   }
 });
 

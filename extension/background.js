@@ -25,7 +25,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   hideYouTubeShorts: true,
   hideYouTubeRecommendations: false,
   scholarOsUrl: 'https://nepaliterminal.github.io/scholar-os/',
-  settingsVersion: 3,
+  alexaBridgeUrl: 'http://127.0.0.1:3457',
+  alexaBridgeToken: '',
+  settingsVersion: 4,
 });
 
 const SESSION_ALARM = 'studyx.session.end';
@@ -88,6 +90,15 @@ function normalizeSettings(input = {}) {
   const scholarOsUrl = settingsVersion < 3 && savedScholarOsUrl === LEGACY_LOCAL_SCHOLAR_OS_URL
     ? defaults.scholarOsUrl
     : savedScholarOsUrl || defaults.scholarOsUrl;
+  let alexaBridgeUrl = cleanText(input.alexaBridgeUrl || defaults.alexaBridgeUrl, 500).replace(/\/$/, '');
+  try {
+    const parsed = new URL(alexaBridgeUrl);
+    if (parsed.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname)) {
+      alexaBridgeUrl = defaults.alexaBridgeUrl;
+    }
+  } catch {
+    alexaBridgeUrl = defaults.alexaBridgeUrl;
+  }
   return {
     defaultDuration: Math.round(clampNumber(input.defaultDuration, 5, 180, defaults.defaultDuration)),
     blockedSites: [...new Set(sites.map(normalizeSite).filter(Boolean))].slice(0, BLOCK_RULE_END - BLOCK_RULE_START + 1),
@@ -97,7 +108,17 @@ function normalizeSettings(input = {}) {
     hideYouTubeShorts: input.hideYouTubeShorts !== false,
     hideYouTubeRecommendations,
     scholarOsUrl,
+    alexaBridgeUrl,
+    alexaBridgeToken: cleanText(input.alexaBridgeToken, 500),
     settingsVersion: defaults.settingsVersion,
+  };
+}
+
+function redactAlexaPairing(settings) {
+  return {
+    ...settings,
+    alexaBridgeToken: '',
+    alexaBridgePaired: Boolean(settings.alexaBridgeToken),
   };
 }
 
@@ -117,6 +138,9 @@ async function getSettings() {
 }
 
 async function ensureDefaults() {
+  if (typeof chrome.storage.local.setAccessLevel === 'function') {
+    await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+  }
   const stored = await chrome.storage.local.get([
     KEYS.settings,
     KEYS.sessions,
@@ -437,14 +461,25 @@ async function getState() {
   const captures = Array.isArray(stored[KEYS.captures]) ? stored[KEYS.captures] : [];
   const sessions = Array.isArray(stored[KEYS.sessions]) ? stored[KEYS.sessions] : [];
   const events = Array.isArray(stored[KEYS.events]) ? stored[KEYS.events] : [];
+  const settings = normalizeSettings(stored[KEYS.settings] || {});
   return {
-    settings: normalizeSettings(stored[KEYS.settings] || {}),
+    settings: redactAlexaPairing(settings),
     current,
     pendingRecap: stored[KEYS.recap] || null,
     scholarContext: stored[KEYS.scholarContext] || normalizeScholarContext(),
     currentCaptures: current ? captures.filter((capture) => capture.sessionId === current.id).slice(0, 20) : [],
     recentSessions: sessions.slice(0, 5),
     pendingScholarEvents: events.filter((event) => !event.deliveredAt).length,
+  };
+}
+
+async function getScholarState(sender) {
+  if (!(await senderIsScholarOs(sender))) throw new Error('ScholarOS bridge origin is not authorized.');
+  const state = await getState();
+  return {
+    current: state.current,
+    pendingRecap: state.pendingRecap,
+    pendingScholarEvents: state.pendingScholarEvents,
   };
 }
 
@@ -494,20 +529,86 @@ async function saveScholarContext(input, sender) {
   return context;
 }
 
+function senderIsExtensionPage(sender) {
+  return String(sender?.url || '').startsWith(chrome.runtime.getURL(''));
+}
+
+function requireExtensionPage(sender) {
+  if (!senderIsExtensionPage(sender)) throw new Error('This private action is available only in extension settings.');
+}
+
+async function alexaBridgeRequest(path, requestOptions, sender, allowExtensionPage = false) {
+  if (!(await senderIsScholarOs(sender)) && !(allowExtensionPage && senderIsExtensionPage(sender))) {
+    throw new Error('ScholarOS Alexa control is not authorized from this page.');
+  }
+  const settings = await getSettings();
+  if (!settings.alexaBridgeToken) throw new Error('Pair the Alexa bridge in extension settings first.');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${settings.alexaBridgeUrl}${path}`, {
+      ...requestOptions,
+      headers: {
+        Authorization: `Bearer ${settings.alexaBridgeToken}`,
+        'Content-Type': 'application/json',
+        ...(requestOptions?.headers || {}),
+      },
+      signal: controller.signal,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'The local Alexa bridge did not respond.');
+    return body.data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('The local Alexa bridge timed out.');
+    if (error instanceof TypeError) throw new Error('Start the local Alexa bridge, then try again.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getAlexaStatus(sender) {
+  return alexaBridgeRequest('/v1/status', { method: 'GET' }, sender, true);
+}
+
+async function sendAlexaCommand(input, sender) {
+  const action = cleanText(input.action, 30);
+  if (!['speak', 'announce', 'play', 'pause', 'next', 'previous', 'volume', 'routine'].includes(action)) {
+    throw new Error('Unsupported Alexa action.');
+  }
+  const command = {
+    action,
+    deviceId: cleanText(input.deviceId, 300),
+    text: cleanText(input.text, 250),
+    routineId: cleanText(input.routineId, 300),
+    volume: Math.round(clampNumber(input.volume, 0, 100, 40)),
+  };
+  return alexaBridgeRequest('/v1/command', {
+    method: 'POST',
+    body: JSON.stringify(command),
+  }, sender, false);
+}
+
 async function saveSettings(input) {
-  const settings = normalizeSettings(input);
+  const previous = await getSettings();
+  const enteredToken = cleanText(input.alexaBridgeToken, 500);
+  const alexaBridgeToken = input.clearAlexaBridgeToken === true
+    ? ''
+    : enteredToken || previous.alexaBridgeToken;
+  const settings = normalizeSettings({ ...input, alexaBridgeToken });
   await chrome.storage.local.set({ [KEYS.settings]: settings });
   await applyBlockRules();
   await broadcastStateChanged();
-  return settings;
+  return redactAlexaPairing(settings);
 }
 
 async function getAllData() {
   const stored = await chrome.storage.local.get(Object.values(KEYS));
+  const settings = normalizeSettings(stored[KEYS.settings] || {});
   return {
     exportedAt: new Date().toISOString(),
     schemaVersion: 1,
-    settings: normalizeSettings(stored[KEYS.settings] || {}),
+    settings: redactAlexaPairing(settings),
     currentSession: stored[KEYS.current] || null,
     sessions: stored[KEYS.sessions] || [],
     captures: stored[KEYS.captures] || [],
@@ -521,6 +622,8 @@ async function handleMessage(message, sender) {
   switch (message?.type) {
     case 'studyx.getState':
       return getState();
+    case 'studyx.getScholarState':
+      return getScholarState(sender);
     case 'studyx.startSession':
       return startSession(message.session || {});
     case 'studyx.stopSession':
@@ -536,12 +639,16 @@ async function handleMessage(message, sender) {
     case 'studyx.dismissRecap':
       return dismissRecap();
     case 'studyx.getSettings':
-      return getSettings();
+      requireExtensionPage(sender);
+      return redactAlexaPairing(await getSettings());
     case 'studyx.saveSettings':
+      requireExtensionPage(sender);
       return saveSettings(message.settings || {});
     case 'studyx.getAllData':
+      requireExtensionPage(sender);
       return getAllData();
     case 'studyx.clearRequests':
+      requireExtensionPage(sender);
       await chrome.storage.local.set({ [KEYS.requests]: [] });
       return { cleared: true };
     case 'studyx.bridgePull':
@@ -550,6 +657,10 @@ async function handleMessage(message, sender) {
       return acknowledgeScholarEvents(message.eventIds, sender);
     case 'studyx.saveScholarContext':
       return saveScholarContext(message.context || {}, sender);
+    case 'studyx.alexaStatus':
+      return getAlexaStatus(sender);
+    case 'studyx.alexaCommand':
+      return sendAlexaCommand(message.command || {}, sender);
     default:
       throw new Error('Unknown Study Session OS message.');
   }

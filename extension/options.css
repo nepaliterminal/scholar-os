@@ -32,7 +32,7 @@ form { display: grid; gap: 16px; }
 h2 { margin: 2px 0 0; font: 700 21px Georgia, serif; }
 .help { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
 label > span:first-child { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 750; }
-input[type="url"], input[type="number"], textarea, select { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; outline: 0; color: var(--ink); background: #fff; }
+input[type="url"], input[type="number"], input[type="password"], textarea, select { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; outline: 0; color: var(--ink); background: #fff; }
 textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(156 111 68 / 12%); }
 .compact-field { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
@@ -51,6 +51,7 @@ code { color: var(--accent-dark); }
 .primary-button:hover { background: var(--accent-dark); }
 .small-button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 9px; color: var(--accent-dark); background: var(--soft); font-size: 11px; font-weight: 750; cursor: pointer; }
 .small-button:hover { border-color: var(--accent); }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .request-list { display: grid; gap: 9px; }
 .request-item { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .request-item header { display: flex; justify-content: space-between; gap: 12px; }

@@ -160,6 +160,30 @@
   .study-subject-track i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
   @media (max-width: 700px) { .study-summary { grid-template-columns: 1fr 1fr; } }
 
+  /* ── Alexa control bridge ───────────── */
+  .alexa-status { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 999px; color: var(--muted); background: var(--soft); font-size: .72rem; font-weight: 700; }
+  .alexa-status i { width: 8px; height: 8px; border-radius: 50%; background: #ba8b76; box-shadow: 0 0 0 3px rgba(186,139,118,.14); }
+  .alexa-status.online { color: var(--good); }
+  .alexa-status.online i { background: var(--good); box-shadow: 0 0 0 3px rgba(110,139,98,.14); }
+  .alexa-home-actions, .alexa-button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
+  .alexa-button { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; color: var(--ink); background: #fff; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; }
+  .alexa-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+  .alexa-button.primary { border-color: var(--accent); color: #fff; background: var(--accent); }
+  .alexa-button:disabled { opacity: .48; cursor: not-allowed; }
+  .alexa-select, .alexa-text, .alexa-volume { width: 100%; }
+  .alexa-select, .alexa-text { border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; color: var(--ink); background: #fff; font: inherit; font-size: .82rem; }
+  .alexa-text { min-height: 84px; resize: vertical; }
+  .alexa-field { display: grid; gap: 6px; margin-top: 12px; }
+  .alexa-field > span, .alexa-label { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .alexa-volume-row { display: grid; grid-template-columns: 1fr 45px; align-items: center; gap: 9px; }
+  .alexa-volume-row output { color: var(--accent); text-align: right; font-size: .82rem; font-weight: 700; }
+  .alexa-note { min-height: 18px; margin-top: 9px; color: var(--muted); font-size: .74rem; }
+  .alexa-log { display: grid; gap: 8px; }
+  .alexa-log-item { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+  .alexa-log-item strong { font-size: .8rem; }
+  .alexa-log-item span, .alexa-log-item time { color: var(--muted); font-size: .68rem; }
+  .alexa-log-item .failed { color: #a45e4c; }
+
   /* ── Stars & rewards ────────────────── */
   .stars-balance { font-family: "Fraunces", Georgia, serif; font-size: 2.1rem; font-weight: 700; color: var(--accent); }
   .stars-sub { font-size: .8rem; color: var(--muted); font-family: sans-serif; font-weight: 400; }
@@ -434,6 +458,7 @@
         <div class="group">Navigate</div>
         <a href="#hub-academics">📚 School Hub</a>
         <a href="#hub-study">🎯 Study Sessions</a>
+        <a href="#hub-alexa">🔊 Alexa Controls</a>
         <a href="#hub-extracurriculars">🏅 Clubs &amp; Fun Hub</a>
         <a href="#hub-finance">💰 Allowance Hub</a>
         <a href="#hub-fitness">💪 Fitness Hub</a>
@@ -467,6 +492,17 @@
         <button class="study-link-btn" id="studySettingsBtn" type="button">Extension settings</button>
       </div>
 
+      <div class="card">
+        <h2>🔊 Alexa Study Controls</h2>
+        <div class="alexa-status" id="alexaHomeStatus"><i></i><span>Checking local bridge…</span></div>
+        <p class="study-note">Send a focus update or today’s plan to your selected Echo.</p>
+        <div class="alexa-home-actions">
+          <button class="alexa-button" id="alexaQuickFocus" type="button">Announce focus</button>
+          <button class="alexa-button" id="alexaQuickPlan" type="button">Read today’s plan</button>
+          <a class="alexa-button" href="#hub-alexa">More controls</a>
+        </div>
+      </div>
+
       <div class="card" id="starsCard">
         <h2>⭐ My Stars &amp; Rewards</h2>
         <div class="stars-balance"><span id="starsCount">0</span> ⭐ <span class="stars-sub">earned</span></div>
@@ -488,6 +524,7 @@
         <h2>Hubs</h2>
         <div class="hubs">
           <a class="hub-tile" href="#hub-study"><span class="ico">🎯</span><span class="lbl">Study Sessions</span></a>
+          <a class="hub-tile" href="#hub-alexa"><span class="ico">🔊</span><span class="lbl">Alexa Controls</span></a>
           <a class="hub-tile" href="#hub-academics"><span class="ico">📚</span><span class="lbl">School Hub</span></a>
           <a class="hub-tile" href="#hub-extracurriculars"><span class="ico">🏅</span><span class="lbl">Clubs &amp; Fun</span></a>
           <a class="hub-tile" href="#hub-finance"><span class="ico">💰</span><span class="lbl">Allowance</span></a>
@@ -591,6 +628,61 @@
     </div>
   </section>
 
+  <section class="hub" id="hub-alexa">
+    <h2 class="serif">🔊 Alexa Controls</h2>
+    <p class="sub">Control your Echo through the private Alexa bridge running on this Mac. Amazon credentials stay off the website and out of GitHub.</p>
+    <div class="hub-grid two">
+      <div class="card">
+        <div class="study-card-heading">
+          <h2>Connection &amp; Device</h2>
+          <div class="alexa-status" id="alexaConnection"><i></i><span>Checking…</span></div>
+        </div>
+        <label class="alexa-field"><span>Alexa device</span><select class="alexa-select" id="alexaDevice"></select></label>
+        <div class="alexa-button-row">
+          <button class="alexa-button" id="alexaRefreshBtn" type="button">Refresh devices</button>
+          <button class="alexa-button" id="alexaSettingsBtn" type="button">Bridge settings</button>
+        </div>
+        <p class="alexa-note" id="alexaConnectionNote">Start the local bridge and pair it in extension settings.</p>
+      </div>
+      <div class="card">
+        <h2>Study Announcements</h2>
+        <p class="study-note">Nothing is sent automatically. Pressing a button sends only that focus update or plan to Amazon through your local bridge.</p>
+        <div class="alexa-button-row">
+          <button class="alexa-button primary" id="alexaFocusBtn" type="button">Announce focus status</button>
+          <button class="alexa-button" id="alexaPlanBtn" type="button">Read today’s plan</button>
+        </div>
+      </div>
+    </div>
+    <div class="hub-grid two" style="margin-top:20px">
+      <div class="card">
+        <h2>Say Something</h2>
+        <label class="alexa-field"><span>Message</span><textarea class="alexa-text" id="alexaMessage" maxlength="250" placeholder="Time to start the next useful step."></textarea></label>
+        <div class="alexa-button-row">
+          <button class="alexa-button primary" id="alexaSpeakBtn" type="button">Speak on device</button>
+          <button class="alexa-button" id="alexaAnnounceBtn" type="button">Play announcement</button>
+        </div>
+        <p class="alexa-note" id="alexaCommandNote">Custom text is not saved by ScholarOS and is cleared after you send it.</p>
+      </div>
+      <div class="card">
+        <h2>Media &amp; Volume</h2>
+        <div class="alexa-button-row">
+          <button class="alexa-button" data-alexa-media="previous" type="button">⏮ Previous</button>
+          <button class="alexa-button" data-alexa-media="play" type="button">▶ Play</button>
+          <button class="alexa-button" data-alexa-media="pause" type="button">⏸ Pause</button>
+          <button class="alexa-button" data-alexa-media="next" type="button">Next ⏭</button>
+        </div>
+        <label class="alexa-field"><span>Volume</span><span class="alexa-volume-row"><input class="alexa-volume" id="alexaVolume" type="range" min="0" max="100" value="40"><output id="alexaVolumeValue">40%</output></span></label>
+        <button class="alexa-button" id="alexaVolumeBtn" type="button">Set volume</button>
+        <label class="alexa-field"><span>Saved routine</span><select class="alexa-select" id="alexaRoutine"></select></label>
+        <button class="alexa-button primary" id="alexaRoutineBtn" type="button">Run routine</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h2>Actions in This Tab</h2>
+      <div class="alexa-log" id="alexaActionLog"></div>
+    </div>
+  </section>
+
   <section class="hub" id="hub-academics">
     <h2 class="serif">📚 School Hub</h2>
     <p class="sub">Stay on top of homework and tests — you've got this!</p>
@@ -630,7 +722,7 @@
     </div>
   </section>
 
-  <footer>Scholar OS — your data never leaves this browser.</footer>
+  <footer>Scholar OS keeps dashboard data in this browser. It is shared only when you choose an action such as Alexa or Daily Report.</footer>
 </div>
 
 <script>
@@ -767,6 +859,9 @@ function loadState(name) {
   S.studyRequests ??= [];
   S.studyEventIds ??= [];
   S.studyStarredSessionIds ??= [];
+  // Remove fields from pre-release Alexa builds that persisted Alexa metadata.
+  delete S.alexaActions;
+  delete S.settings.alexaDeviceId;
   S.rewards ??= JSON.parse(JSON.stringify(DEFAULTS.rewards));
   S.backpack ??= [...DEFAULTS.backpack];
   S.backpackDays ??= {};
@@ -887,6 +982,14 @@ let studyCommandNumber = 0;
 let studyTimer = null;
 const pendingStudyCommands = new Map();
 
+/* Alexa data is deliberately session-only. Device and routine names, opaque IDs,
+   custom messages, and commands are never written to ScholarOS localStorage. */
+let alexaBridgeState = { connected: false, devices: [], routines: [], error: "" };
+let alexaSelectedDeviceId = "";
+let alexaRequestNumber = 0;
+const pendingAlexaRequests = new Map();
+const alexaActionHistory = [];
+
 function postToStudyExtension(message) {
   window.postMessage({ source: "scholar-os", version: 1, ...message }, "*");
 }
@@ -902,6 +1005,161 @@ function sendStudyCommand(command, payload = {}) {
     }, 6000);
     pendingStudyCommands.set(commandId, { resolve, reject, timeout });
   });
+}
+
+function sendAlexaRequest(operation, command = {}) {
+  if (!studyExtensionAvailable) return Promise.reject(new Error("Study Session OS is not connected."));
+  const requestId = `alexa_${Date.now().toString(36)}_${++alexaRequestNumber}`;
+  postToStudyExtension({ type: "SCHOLAROS_ALEXA_REQUEST", requestId, operation, command });
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingAlexaRequests.delete(requestId);
+      reject(new Error("The private Alexa bridge did not respond."));
+    }, 10000);
+    pendingAlexaRequests.set(requestId, { resolve, reject, timeout });
+  });
+}
+
+function normalizeAlexaStatus(input = {}) {
+  const devices = Array.isArray(input.devices) ? input.devices : [];
+  const routines = Array.isArray(input.routines) ? input.routines : [];
+  return {
+    connected: input.connected === true,
+    devices: devices.slice(0, 100).map(device => ({
+      id: String(device?.id || "").slice(0, 100),
+      name: String(device?.name || "Alexa device").slice(0, 120),
+      online: device?.online !== false,
+    })).filter(device => device.id),
+    routines: routines.slice(0, 200).map(routine => ({
+      id: String(routine?.id || "").slice(0, 100),
+      name: String(routine?.name || "Alexa routine").slice(0, 120),
+    })).filter(routine => routine.id),
+    error: "",
+  };
+}
+
+async function requestAlexaStatus() {
+  if (!studyExtensionAvailable) {
+    alexaBridgeState = { connected: false, devices: [], routines: [], error: "Load the Study Session OS extension first." };
+    renderAlexaControls();
+    return;
+  }
+  alexaBridgeState.error = "";
+  renderAlexaControls(true);
+  try {
+    alexaBridgeState = normalizeAlexaStatus(await sendAlexaRequest("status"));
+    if (!alexaBridgeState.devices.some(device => device.id === alexaSelectedDeviceId)) {
+      alexaSelectedDeviceId = alexaBridgeState.devices[0]?.id || "";
+    }
+  } catch (error) {
+    alexaBridgeState = { connected: false, devices: [], routines: [], error: error.message };
+    alexaSelectedDeviceId = "";
+  }
+  renderAlexaControls();
+}
+
+function currentAlexaDeviceId() {
+  return alexaBridgeState.devices.some(device => device.id === alexaSelectedDeviceId)
+    ? alexaSelectedDeviceId
+    : alexaBridgeState.devices[0]?.id || "";
+}
+
+function setAlexaStatusElement(element, online, text) {
+  element.classList.toggle("online", online);
+  element.querySelector("span").textContent = text;
+}
+
+function renderAlexaControls(loading = false) {
+  const hasExtension = studyExtensionAvailable;
+  const online = hasExtension && alexaBridgeState.connected;
+  const hasDevice = online && Boolean(currentAlexaDeviceId());
+  const statusText = loading
+    ? "Checking private bridge…"
+    : online
+      ? `${alexaBridgeState.devices.length} device${alexaBridgeState.devices.length === 1 ? "" : "s"} ready`
+      : hasExtension ? "Bridge not connected" : "Extension not detected";
+  setAlexaStatusElement($("alexaConnection"), online, statusText);
+  setAlexaStatusElement($("alexaHomeStatus"), online, statusText);
+
+  const deviceSelect = $("alexaDevice");
+  const deviceSignature = alexaBridgeState.devices.map(device => `${device.id}\u0000${device.name}\u0000${device.online}`).join("\n");
+  if (deviceSelect.dataset.signature !== deviceSignature) {
+    deviceSelect.innerHTML = alexaBridgeState.devices.length
+      ? alexaBridgeState.devices.map(device => `<option value="${esc(device.id)}">${esc(device.name)}${device.online ? "" : " (offline)"}</option>`).join("")
+      : '<option value="">No devices available</option>';
+    deviceSelect.dataset.signature = deviceSignature;
+  }
+  deviceSelect.value = currentAlexaDeviceId();
+  deviceSelect.disabled = !hasDevice;
+
+  const routineSelect = $("alexaRoutine");
+  const selectedRoutine = routineSelect.value;
+  const routineSignature = alexaBridgeState.routines.map(routine => `${routine.id}\u0000${routine.name}`).join("\n");
+  if (routineSelect.dataset.signature !== routineSignature) {
+    routineSelect.innerHTML = alexaBridgeState.routines.length
+      ? alexaBridgeState.routines.map(routine => `<option value="${esc(routine.id)}">${esc(routine.name)}</option>`).join("")
+      : '<option value="">No routines available</option>';
+    routineSelect.dataset.signature = routineSignature;
+    if (alexaBridgeState.routines.some(routine => routine.id === selectedRoutine)) routineSelect.value = selectedRoutine;
+  }
+  routineSelect.disabled = !hasDevice || !alexaBridgeState.routines.length;
+
+  $("alexaRefreshBtn").disabled = !hasExtension || loading;
+  $("alexaSettingsBtn").disabled = !hasExtension;
+  for (const button of [$("alexaQuickFocus"), $("alexaQuickPlan"), $("alexaFocusBtn"), $("alexaPlanBtn"), $("alexaSpeakBtn"), $("alexaAnnounceBtn"), $("alexaVolumeBtn"), ...document.querySelectorAll("[data-alexa-media]")]) {
+    button.disabled = !hasDevice || loading;
+  }
+  $("alexaRoutineBtn").disabled = !hasDevice || !alexaBridgeState.routines.length || loading;
+  $("alexaConnectionNote").textContent = online
+    ? "Device and routine names are kept only in this open tab—not in ScholarOS storage or analytics."
+    : alexaBridgeState.error || "Start the local bridge and pair it in extension settings.";
+
+  $("alexaActionLog").innerHTML = alexaActionHistory.length
+    ? alexaActionHistory.map(item => `<article class="alexa-log-item"><strong>${esc(item.action)}</strong><time>${esc(item.when)}</time><span class="${item.ok ? "" : "failed"}">${item.ok ? "Sent" : "Failed"}</span></article>`).join("")
+    : '<p class="study-empty">No actions in this tab yet. Alexa history is cleared when you close or reload it.</p>';
+}
+
+function recordAlexaAction(action, ok) {
+  alexaActionHistory.unshift({
+    action: String(action).slice(0, 60),
+    ok: Boolean(ok),
+    when: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+  });
+  alexaActionHistory.splice(12);
+}
+
+async function runAlexaCommand(command, actionLabel) {
+  const deviceId = currentAlexaDeviceId();
+  if (!deviceId) {
+    $("alexaCommandNote").textContent = "Connect the private bridge and choose an Alexa device first.";
+    return;
+  }
+  $("alexaCommandNote").textContent = "Sending through the private local bridge…";
+  try {
+    await sendAlexaRequest("command", { ...command, deviceId });
+    recordAlexaAction(actionLabel, true);
+    $("alexaCommandNote").textContent = "Sent. No message, device name, or routine name was saved by ScholarOS.";
+  } catch (error) {
+    recordAlexaAction(actionLabel, false);
+    $("alexaCommandNote").textContent = error.message;
+  }
+  renderAlexaControls();
+}
+
+function alexaFocusText() {
+  const session = studyExtensionState.current;
+  if (!session) return "No focus session is active. Choose your next useful step in Scholar OS.";
+  const subject = String(session.subject || "your study session").slice(0, 80);
+  const intention = String(session.intention || "Stay with the next useful step.").slice(0, 120);
+  return `Focus session active for ${subject}. ${intention}`.slice(0, 250);
+}
+
+function alexaPlanText() {
+  if (!S) return "Open Scholar OS to choose today's plan.";
+  const openAssignments = S.assignments.filter(item => item.status !== "Completed").sort((a, b) => String(a.due).localeCompare(String(b.due))).slice(0, 3).map(item => item.name);
+  const openTodos = S.todos.filter(item => !item.done).slice(0, 3).map(item => item.txt);
+  const tasks = [...openAssignments, ...openTodos].slice(0, 4);
+  return (tasks.length ? `Today's plan: ${tasks.join(". ")}.` : "Today's Scholar OS plan is clear. Nice work.").slice(0, 250);
 }
 
 function requestStudySync() {
@@ -1204,6 +1462,41 @@ $("studySettingsBtn").onclick = () => {
   sendStudyCommand("openOptions").catch(error => { $("studyNote").textContent = error.message; });
 };
 
+$("alexaDevice").onchange = event => {
+  const selected = String(event.target.value || "");
+  alexaSelectedDeviceId = alexaBridgeState.devices.some(device => device.id === selected) ? selected : "";
+};
+$("alexaRefreshBtn").onclick = requestAlexaStatus;
+$("alexaSettingsBtn").onclick = () => {
+  sendStudyCommand("openOptions").catch(error => { $("alexaConnectionNote").textContent = error.message; });
+};
+for (const button of [$("alexaQuickFocus"), $("alexaFocusBtn")]) {
+  button.onclick = () => runAlexaCommand({ action: "announce", text: alexaFocusText() }, "Focus update");
+}
+for (const button of [$("alexaQuickPlan"), $("alexaPlanBtn")]) {
+  button.onclick = () => runAlexaCommand({ action: "speak", text: alexaPlanText() }, "Today’s plan");
+}
+$("alexaSpeakBtn").onclick = () => {
+  const text = $("alexaMessage").value.trim();
+  if (!text) { $("alexaCommandNote").textContent = "Type a message first."; return; }
+  runAlexaCommand({ action: "speak", text }, "Custom message").then(() => { $("alexaMessage").value = ""; });
+};
+$("alexaAnnounceBtn").onclick = () => {
+  const text = $("alexaMessage").value.trim();
+  if (!text) { $("alexaCommandNote").textContent = "Type a message first."; return; }
+  runAlexaCommand({ action: "announce", text }, "Custom announcement").then(() => { $("alexaMessage").value = ""; });
+};
+for (const button of document.querySelectorAll("[data-alexa-media]")) {
+  button.onclick = () => runAlexaCommand({ action: button.dataset.alexaMedia }, "Media control");
+}
+$("alexaVolume").oninput = event => { $("alexaVolumeValue").textContent = `${event.target.value}%`; };
+$("alexaVolumeBtn").onclick = () => runAlexaCommand({ action: "volume", volume: Number($("alexaVolume").value) }, "Volume changed");
+$("alexaRoutineBtn").onclick = () => {
+  const routineId = $("alexaRoutine").value;
+  if (!routineId) { $("alexaCommandNote").textContent = "Choose a routine first."; return; }
+  runAlexaCommand({ action: "routine", routineId }, "Routine started");
+};
+
 window.addEventListener("message", event => {
   if (event.source !== window || event.data?.source !== "studyx-extension" || event.data.version !== 1) return;
   const message = event.data;
@@ -1211,6 +1504,7 @@ window.addEventListener("message", event => {
     studyExtensionAvailable = true;
     renderStudyLauncher();
     requestStudySync();
+    requestAlexaStatus();
   } else if (message.type === "STUDYX_STATE" && message.state) {
     studyExtensionAvailable = true;
     studyExtensionState = message.state;
@@ -1228,6 +1522,13 @@ window.addEventListener("message", event => {
     pendingStudyCommands.delete(message.commandId);
     if (message.ok) pending.resolve(message.data);
     else pending.reject(new Error(message.error || "Study Session OS command failed."));
+  } else if (message.type === "STUDYX_ALEXA_RESULT") {
+    const pending = pendingAlexaRequests.get(message.requestId);
+    if (!pending) return;
+    clearTimeout(pending.timeout);
+    pendingAlexaRequests.delete(message.requestId);
+    if (message.ok) pending.resolve(message.data);
+    else pending.reject(new Error(message.error || "The private Alexa bridge failed."));
   }
 });
 
@@ -1741,7 +2042,7 @@ function renderAll() {
   renderTexts(); renderSwatches(); renderTables(); renderTodos();
   renderHabits(); renderHabitHistory(); renderBackpack();
   renderRewards(); renderCountdown(); renderDerived();
-  renderStudyData(); renderStudyLauncher();
+  renderStudyData(); renderStudyLauncher(); renderAlexaControls();
 }
 (function boot() {
   const cur = currentAccount();

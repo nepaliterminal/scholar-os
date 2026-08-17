@@ -63,6 +63,25 @@
         <p class="callout">For a local <code>file://</code> dashboard, enable “Allow access to file URLs” for this extension in Chrome’s extension details.</p>
       </section>
 
+      <section class="card">
+        <div class="card-heading"><div><p class="eyebrow">Alexa</p><h2>Local control bridge</h2></div></div>
+        <p class="help">ScholarOS controls Alexa through the private bridge running on this Mac. Amazon credentials never enter the extension or website.</p>
+        <label>
+          <span>Bridge URL</span>
+          <input id="alexaBridgeUrl" type="url" placeholder="http://127.0.0.1:3457">
+        </label>
+        <label>
+          <span>Pairing token</span>
+          <input id="alexaBridgeToken" type="password" autocomplete="off" placeholder="Run npm run bridge:pair in alexainit">
+        </label>
+        <p class="help">Stored only in this extension's private local storage. It is never sent to ScholarOS and is removed from exports.</p>
+        <div class="button-row">
+          <button id="testAlexaBridge" class="small-button" type="button">Test Alexa connection</button>
+          <button id="forgetAlexaPairing" class="small-button" type="button">Forget pairing</button>
+        </div>
+        <p id="alexaBridgeStatus" class="help"></p>
+      </section>
+
       <button id="saveButton" class="primary-button" type="submit">Save settings</button>
     </form>
 

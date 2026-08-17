@@ -1,6 +1,6 @@
 {
   "name": "study-session-os-extension",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A dependency-free Manifest V3 focus and study-capture extension.",
   "scripts": {

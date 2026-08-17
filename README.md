@@ -11,8 +11,11 @@ ScholarOS is a local-first student dashboard with a connected Chrome extension f
 - Show seven-day focus analytics, completion rate, focus streak, average session time, blocked distractions, and subject trends.
 - Award the extension's suggested study stars once per completed session, even after reloads or event retries.
 - Include today's focus minutes in the ScholarOS daily report.
+- Control Alexa devices, media, volume, study announcements, and saved routines through a private localhost bridge.
 
 The integration is local-first. The extension keeps a durable event outbox in `chrome.storage.local`; ScholarOS saves an event before acknowledging it, so closing either interface does not lose study activity.
+
+Alexa is opt-in per action. Amazon credentials never enter this repository, the extension, or the website. Echo/routine names, opaque device IDs, custom spoken text, and Alexa action history are kept only in the open ScholarOS tab and are not added to dashboard storage or analytics.
 
 ## Run ScholarOS locally
 
@@ -33,6 +36,17 @@ https://nepaliterminal.github.io/scholar-os/
 ```
 
 For local development, enable **Allow access to file URLs**, copy the exact local `index.html` URL into **Extension settings → ScholarOS dashboard URL**, save, and reload the file. Only the configured dashboard can read or acknowledge extension events.
+
+## Connect Alexa privately
+
+The companion bridge lives in `/Users/subed/alexainit` on this Mac.
+
+1. Run `npm run bridge` in that folder and keep it open.
+2. In a second terminal in the same folder, run `npm run bridge:pair`.
+3. Paste the token directly into **Study Session OS → Extension settings → Alexa** and select **Test Alexa connection**. Never paste the token into chat or source code.
+4. Reload ScholarOS and open **Alexa Controls**.
+
+The Amazon session and bridge token remain in gitignored, owner-only local files. Environment overrides are available, but secrets are not bundled into the website. See `/Users/subed/alexainit/README.md` for the complete boundary.
 
 ## Validate
 

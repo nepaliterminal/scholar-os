@@ -59,6 +59,14 @@ The extension posts `STUDYX_BRIDGE_AVAILABLE` when it detects the configured das
 
 ScholarOS can send a `SCHOLAROS_COMMAND` with a unique `commandId`. Version 1 supports `getState`, `startSession`, `stopSession`, and `openOptions`. The extension answers with `STUDYX_COMMAND_RESULT` using the same ID. Commands are accepted only from the exact configured dashboard URL.
 
+The `getState` result sent to ScholarOS is explicitly reduced to the active session, pending recap, and pending-event count. Extension settings—especially the Alexa pairing token—are never included.
+
+## Alexa relay
+
+ScholarOS can send `SCHOLAROS_ALEXA_REQUEST` with a unique `requestId` and either a `status` operation or an allowlisted command. The extension answers with `STUDYX_ALEXA_RESULT`. It authenticates to the bridge itself, so neither the request nor the reply contains the pairing token.
+
+The Alexa bridge must use a loopback HTTP URL and a bearer pairing token stored in the extension's private storage. The website never connects to localhost directly. Device and routine identifiers exposed by the bridge are opaque hashes; names and command text remain memory-only in the open ScholarOS tab. Alexa requests are never added to the durable ScholarOS event outbox.
+
 ## Event envelope
 
 ```json

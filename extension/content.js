@@ -315,7 +315,7 @@
       let data;
       switch (message.command) {
         case 'getState':
-          data = await send('studyx.getState');
+          data = await send('studyx.getScholarState');
           break;
         case 'startSession':
           data = await send('studyx.startSession', { session: message.payload?.session || {} });
@@ -336,6 +336,24 @@
       postToScholarOs({
         type: 'STUDYX_COMMAND_RESULT',
         commandId,
+        ok: false,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
+  async function handleScholarAlexaRequest(message) {
+    const requestId = String(message.requestId || '').slice(0, 100);
+    if (!requestId) return;
+    try {
+      const data = message.operation === 'status'
+        ? await send('studyx.alexaStatus')
+        : await send('studyx.alexaCommand', { command: message.command || {} });
+      postToScholarOs({ type: 'STUDYX_ALEXA_RESULT', requestId, ok: true, data });
+    } catch (error) {
+      postToScholarOs({
+        type: 'STUDYX_ALEXA_RESULT',
+        requestId,
         ok: false,
         error: error?.message || String(error),
       });
@@ -371,6 +389,7 @@
       }
     }
     if (event.data.type === 'SCHOLAROS_COMMAND') await handleScholarCommand(event.data);
+    if (event.data.type === 'SCHOLAROS_ALEXA_REQUEST') await handleScholarAlexaRequest(event.data);
   });
 
   document.addEventListener('mouseup', (event) => {

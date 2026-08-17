@@ -17,9 +17,10 @@ A dependency-free Manifest V3 extension that combines focus sessions, distractio
 - Use ScholarOS classes as subject suggestions in the extension.
 - Sync completed sessions, captures, access requests, and earned study stars into the active ScholarOS account.
 - Queue versioned, idempotent events while ScholarOS is closed, then acknowledge them after the dashboard saves them.
+- Relay explicit Alexa commands from the authorized ScholarOS page to the authenticated localhost bridge.
 - Export all local extension data as JSON.
 
-PDF-specific capture, AI flashcards, daily cross-browser screen-time limits, parent approval decisions, and Alexa actions are deliberately deferred.
+PDF-specific capture, AI flashcards, daily cross-browser screen-time limits, and parent approval decisions are deliberately deferred.
 
 ## Install for local development
 
@@ -48,13 +49,13 @@ The bridge will not mark events delivered until the ScholarOS page explicitly ac
 4. Open the popup to capture a page note or view live counters.
 5. Let the timer finish or end early, then complete the recap.
 
-Configure blocked domains, YouTube behavior, and the ScholarOS URL from the settings page.
+Configure blocked domains, YouTube behavior, the ScholarOS URL, and the private Alexa bridge from the settings page.
 
 Do not add `youtube.com` to **Blocked websites** if you want to use the thumbnail shield. A blocked domain is redirected completely during a session; the separate YouTube settings control blur/hide behavior while keeping the site available.
 
 ## Privacy and permissions
 
-All study data stays in `chrome.storage.local` and the selected ScholarOS profile's local browser storage unless the user exports it.
+Study data stays in `chrome.storage.local` and the selected ScholarOS profile's local browser storage unless the user exports it or explicitly presses an Alexa or Daily Report action.
 
 - `storage`: persistent session, capture, settings, and outbox data.
 - `alarms`: restoreable session-end scheduling.
@@ -63,6 +64,8 @@ All study data stays in `chrome.storage.local` and the selected ScholarOS profil
 - `tabs` and website access: send capture and session-state messages to normal webpages.
 
 The extension records only explicit captures, session metadata, configured blocked domains, and the count/domain of blocked attempts. It does not store general browsing history.
+
+The Alexa pairing token is stored only in the extension's private `chrome.storage.local` area so it can authenticate after restart. ScholarOS never receives it, exports redact it, and Alexa commands are accepted only from the exact configured dashboard. Amazon credentials remain solely in the separate local `alexainit` process. Device/routine names and spoken text are not added to extension exports or ScholarOS storage.
 
 ## Validate
 
@@ -76,7 +79,7 @@ npm run check
 
 - The extension owns active focus sessions and in-browser capture.
 - ScholarOS remains the planner and final authority for classes, assignments, and stars.
-- Alexa will later consume high-level events for announcements and focus routines.
-- Amazon credentials must remain only in the separate `alexainit` process; they must never enter this extension.
+- Alexa commands travel through the authenticated `alexainit` localhost bridge only after an explicit click in ScholarOS.
+- Amazon credentials remain only in the separate `alexainit` process; they never enter this extension.
 
 The bridge event contract is documented in [`docs/scholaros-bridge.md`](docs/scholaros-bridge.md).

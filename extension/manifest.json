@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Study Session OS",
-  "version": "0.2.0",
-  "description": "ScholarOS-connected focus sessions, distraction blocking, highlights, notes, and recaps.",
+  "version": "0.3.0",
+  "description": "ScholarOS focus sessions, distraction blocking, study capture, analytics, and private Alexa controls.",
   "permissions": [
     "alarms",
     "contextMenus",
