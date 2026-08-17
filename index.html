@@ -1512,6 +1512,7 @@ window.addEventListener("message", event => {
   if (event.source !== window || event.data?.source !== "studyx-extension" || event.data.version !== 1) return;
   const message = event.data;
   if (message.type === "STUDYX_BRIDGE_AVAILABLE") {
+    if (studyExtensionAvailable) return; // ignore re-announcements (older extensions re-send this on every state refresh, causing a re-render loop)
     studyExtensionAvailable = true;
     renderStudyLauncher();
     requestStudySync();

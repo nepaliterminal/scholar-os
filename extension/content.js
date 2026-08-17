@@ -9,6 +9,7 @@
   let toolbarHost = null;
   let toolbarRoot = null;
   let shieldStyle = null;
+  let bridgeAnnounced = false;
 
   async function send(type, extra = {}) {
     const response = await chrome.runtime.sendMessage({ type, ...extra });
@@ -305,6 +306,8 @@
   }
 
   function announceBridge() {
+    if (bridgeAnnounced || !isScholarOsPage()) return;
+    bridgeAnnounced = true;
     postToScholarOs({ type: 'STUDYX_BRIDGE_AVAILABLE' });
   }
 
@@ -331,7 +334,7 @@
           throw new Error('Unsupported ScholarOS command.');
       }
       postToScholarOs({ type: 'STUDYX_COMMAND_RESULT', commandId, ok: true, data });
-      await refreshState();
+      if (message.command !== 'getState') await refreshState();
     } catch (error) {
       postToScholarOs({
         type: 'STUDYX_COMMAND_RESULT',
