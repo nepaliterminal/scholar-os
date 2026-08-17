@@ -417,10 +417,6 @@
     return false;
   });
 
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes['studyx.currentSession'] || changes['studyx.settings'])) refreshState();
-  });
-
   keepYouTubeShieldMounted();
   refreshState();
 })();

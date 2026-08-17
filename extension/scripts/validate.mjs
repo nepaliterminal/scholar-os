@@ -46,6 +46,17 @@ if (!manifest.permissions?.includes('storage')) {
   failures.push('storage permission is required for persistent sessions');
 }
 
+const [backgroundSource, contentSource] = await Promise.all([
+  readFile(join(root, 'background.js'), 'utf8'),
+  readFile(join(root, 'content.js'), 'utf8'),
+]);
+if (!backgroundSource.includes("setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })")) {
+  failures.push('extension storage must be restricted to trusted contexts');
+}
+if (contentSource.includes('chrome.storage')) {
+  failures.push('content scripts must use redacted background messages instead of private extension storage');
+}
+
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join('\n'));
   process.exit(1);

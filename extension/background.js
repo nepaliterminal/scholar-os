@@ -139,7 +139,12 @@ async function getSettings() {
 
 async function ensureDefaults() {
   if (typeof chrome.storage.local.setAccessLevel === 'function') {
-    await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+    try {
+      await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+    } catch {
+      // Older or policy-managed browsers may reject this hardening call. Message
+      // boundaries still redact secrets, so startup must continue either way.
+    }
   }
   const stored = await chrome.storage.local.get([
     KEYS.settings,
