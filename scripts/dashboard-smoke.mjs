@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -108,6 +108,12 @@ try {
 
   await call('Runtime.enable');
   await call('Page.enable');
+  await call('Emulation.setDeviceMetricsOverride', {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
   await evaluate(`(() => {
     localStorage.clear();
     localStorage.setItem('scholaros.g6.accounts', JSON.stringify([{ name: 'Smoke Test', pin: null, avatar: '🧪' }]));
@@ -195,23 +201,39 @@ try {
       devices: [{ id: privateDeviceId, name: privateDeviceName, online: true }],
       routines: [{ id: privateRoutineId, name: privateRoutineName }],
     });
+    studyExtensionAvailable = true;
     alexaSelectedDeviceId = privateDeviceId;
     document.querySelector('#alexaMessage').value = privateMessage;
     renderAlexaControls();
     const stored = Object.values(localStorage).join('\\n');
+    const actionArea = document.querySelector('.alexa-home-actions').getBoundingClientRect();
+    const actionButtons = [...document.querySelectorAll('.alexa-home-actions .alexa-button')].map(element => element.getBoundingClientRect());
     return {
       deviceRendered: document.querySelector('#alexaDevice').innerText,
       routineRendered: document.querySelector('#alexaRoutine').innerText,
       leaked: [privateDeviceName, privateDeviceId, privateRoutineName, privateRoutineId, privateMessage]
         .some(value => stored.includes(value)),
       persistentAlexaHistory: stored.includes('alexaActions'),
+      actionsStayInsideCard: actionButtons.every(rect => rect.left >= actionArea.left - 1 && rect.right <= actionArea.right + 1),
+      actionRows: new Set(actionButtons.map(rect => Math.round(rect.top))).size,
+      horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
     };
   })()`);
   assert.match(alexaPrivacy.deviceRendered, /Private Bedroom Echo/);
   assert.match(alexaPrivacy.routineRendered, /Private Morning Routine/);
   assert.equal(alexaPrivacy.leaked, false, 'Alexa names, IDs, and message text must not enter localStorage');
   assert.equal(alexaPrivacy.persistentAlexaHistory, false, 'Alexa action history must remain memory-only');
+  assert.equal(alexaPrivacy.actionsStayInsideCard, true, 'mobile Alexa actions must stay inside their card');
+  assert.ok(alexaPrivacy.actionRows >= 2, 'mobile Alexa actions should use more than one row');
+  assert.equal(alexaPrivacy.horizontalOverflow, false, 'mobile ScholarOS must not overflow horizontally');
   assert.deepEqual(runtimeErrors, []);
+
+  if (process.env.SCHOLAROS_SCREENSHOT) {
+    await evaluate(`document.querySelector('.alexa-home-actions').scrollIntoView({ block: 'center' })`);
+    await delay(100);
+    const screenshot = await call('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    await writeFile(process.env.SCHOLAROS_SCREENSHOT, Buffer.from(screenshot.data, 'base64'));
+  }
 
   console.log(JSON.stringify({
     dashboardLoaded: true,

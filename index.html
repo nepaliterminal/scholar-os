@@ -165,8 +165,9 @@
   .alexa-status i { width: 8px; height: 8px; border-radius: 50%; background: #ba8b76; box-shadow: 0 0 0 3px rgba(186,139,118,.14); }
   .alexa-status.online { color: var(--good); }
   .alexa-status.online i { background: var(--good); box-shadow: 0 0 0 3px rgba(110,139,98,.14); }
-  .alexa-home-actions, .alexa-button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
-  .alexa-button { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; color: var(--ink); background: #fff; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; }
+  .alexa-home-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
+  .alexa-button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
+  .alexa-button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; color: var(--ink); background: #fff; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; line-height: 1.25; text-align: center; text-decoration: none; white-space: normal; }
   .alexa-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
   .alexa-button.primary { border-color: var(--accent); color: #fff; background: var(--accent); }
   .alexa-button:disabled { opacity: .48; cursor: not-allowed; }
@@ -183,6 +184,16 @@
   .alexa-log-item strong { font-size: .8rem; }
   .alexa-log-item span, .alexa-log-item time { color: var(--muted); font-size: .68rem; }
   .alexa-log-item .failed { color: #a45e4c; }
+  @media (max-width: 520px) {
+    .alexa-home-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .alexa-home-actions .alexa-button:last-child { grid-column: 1 / -1; }
+    .alexa-button-row .alexa-button { flex: 1 1 calc(50% - 4px); }
+  }
+  @media (max-width: 360px) {
+    .alexa-home-actions { grid-template-columns: 1fr; }
+    .alexa-home-actions .alexa-button:last-child { grid-column: auto; }
+    .alexa-button-row .alexa-button { flex-basis: 100%; }
+  }
 
   /* ── Stars & rewards ────────────────── */
   .stars-balance { font-family: "Fraunces", Georgia, serif; font-size: 2.1rem; font-weight: 700; color: var(--accent); }
