@@ -2,6 +2,24 @@
 
 An all-in-one study tool (website + browser extension) with **focus/productivity** and **note-taking/highlights** at the core.
 
+## Build status — August 2026
+
+Implemented:
+
+- session intention, brain-dump warm-up, timer, blocking, recap, and self-rating;
+- session-linked highlights, notes, YouTube timestamps, ScholarOS sync, stars, and analytics;
+- temporary access requests with reasons and bounded approvals;
+- thumbnail-only YouTube blur/hide, Shorts/recommendation controls, and TikTok foreground limits;
+- private Alexa controls, LockIn system enforcement, Poke focus briefs, and School/Summer/Party day context;
+- replay-safe browser commands plus an iPhone/iPad Screen Time companion project.
+
+Still worth exploring after the current system is stable:
+
+- first-class Chrome PDF-viewer highlighting;
+- educational channel/playlist allowlists for the YouTube shield;
+- automatic flashcard drafts and a true spaced-repetition due queue;
+- richer source-level learning analytics without collecting general browsing history.
+
 ## The Gap
 
 The market splits into two camps that almost never talk to each other:
