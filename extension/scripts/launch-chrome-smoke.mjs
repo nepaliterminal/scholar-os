@@ -87,7 +87,10 @@ async function stopChrome() {
 async function workerExtensionName(target) {
   return new Promise((resolve) => {
     const socket = new WebSocket(target.webSocketDebuggerUrl);
+    let settled = false;
     const finish = (value) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timeout);
       socket.close();
       resolve(value);
@@ -101,8 +104,12 @@ async function workerExtensionName(target) {
       }));
     });
     socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data);
-      if (message.id === 1) finish(message.result?.result?.value || null);
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === 1) finish(message.result?.result?.value || null);
+      } catch {
+        finish(null);
+      }
     });
     socket.addEventListener('error', () => finish(null));
   });
