@@ -78,6 +78,8 @@ const policy = await read('ios/PolicyCore/ScholarPolicy.swift');
 assert.ok(policy.includes('static let allowedMinutes = 1...1_439'), 'daily limit must fit inside the recurring schedule');
 assert.ok(policy.includes('func rolledForwardIfNeeded('), 'day context must support local-date rollover');
 assert.ok(policy.includes('func validate(now: Date = .now) throws'), 'remote policy commands need semantic validation');
+assert.ok(policy.includes('struct RemoteCommandReplayGuard'), 'remote policy commands need durable replay receipts');
+assert.ok(policy.includes('case duplicateCommand'), 'remote policy replay must be rejected explicitly');
 
 const shared = await read('ios/Shared/LockInShared.swift');
 assert.ok(shared.includes('dailyShieldStateKey'), 'daily-limit shield needs independently owned state');
@@ -88,10 +90,28 @@ assert.ok(privacyManifest.includes('NSPrivacyAccessedAPICategoryUserDefaults'), 
 assert.ok(privacyManifest.includes('<string>1C8F.1</string>'), 'App Group UserDefaults requires reason 1C8F.1');
 assert.match(privacyManifest, /<key>NSPrivacyTracking<\/key>\s*<false\/>/, 'native app must declare no tracking');
 
+const screenTimeController = await read('ios/ScholarOSMobile/ScreenTimeController.swift');
+assert.match(
+  screenTimeController,
+  /Monitoring could not start and remains off:[\s\S]*?localizedDescription/,
+  'a failed DeviceActivity replacement must remain visibly disabled',
+);
+assert.match(
+  screenTimeController,
+  /ScreenTimePolicy\([\s\S]*?isEnabled: false[\s\S]*?\)/,
+  'a failed DeviceActivity replacement must persist disabled state',
+);
+
+const monitorExtension = await read('ios/DeviceActivityMonitor/DeviceActivityMonitorExtension.swift');
+assert.ok(
+  monitorExtension.includes('rolledForwardIfNeeded()'),
+  'the monitor extension must roll the checklist forward without opening the app',
+);
+
 const nativeSources = await Promise.all([
   policy,
   shared,
-  read('ios/ScholarOSMobile/ScreenTimeController.swift'),
+  screenTimeController,
   read('ios/ScholarOSMobile/ContentView.swift'),
 ]);
 assert.doesNotMatch(

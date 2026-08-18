@@ -137,7 +137,20 @@ final class ScreenTimeController: ObservableObject {
             reconcileScholarGate()
             message = "Policy is active: \(dailyLimitMinutes) minutes per day plus ScholarOS task rules."
         } catch {
-            message = "The policy was saved, but monitoring could not start: \(error.localizedDescription)"
+            // startDailyMonitoring stops the previous schedule before replacing
+            // it. Never persist an enabled-looking policy after that replacement
+            // fails, because the next launch would otherwise claim protection is
+            // active while no DeviceActivity schedule exists.
+            activityCenter.stopMonitoring([.scholarOSDaily])
+            dailyLimitStore.clearAllSettings()
+            scholarGateStore.clearAllSettings()
+            SharedStore.shieldSnapshot = .clear
+            SharedStore.policy = ScreenTimePolicy(
+                dailyLimitMinutes: policy.dailyLimitMinutes,
+                isEnabled: false
+            )
+            isMonitoringEnabled = false
+            message = "Monitoring could not start and remains off: \(error.localizedDescription)"
         }
 #endif
     }

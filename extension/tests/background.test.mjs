@@ -10,10 +10,13 @@ const data = {
 let dynamicRules = [];
 let messageListener = null;
 let alarmListener = null;
+let installedListener = null;
+let startupListener = null;
 const bridgeFetches = [];
 const companionCommandQueue = [];
 const companionAcks = [];
 const storageWrites = [];
+let browserWindowFocused = true;
 
 globalThis.fetch = async (url, options = {}) => {
   const request = { url: String(url), options };
@@ -126,12 +129,15 @@ globalThis.chrome = {
       : [],
     sendMessage: async () => ({ ok: true }),
   },
+  windows: {
+    getLastFocused: async () => ({ id: 3, focused: browserWindowFocused }),
+  },
   runtime: {
     getURL: (path) => `chrome-extension://studyx-test/${path}`,
     getManifest: () => ({ version: '0.5.0' }),
     onMessage: { addListener(listener) { messageListener = listener; } },
-    onInstalled: { addListener() {} },
-    onStartup: { addListener() {} },
+    onInstalled: { addListener(listener) { installedListener = listener; } },
+    onStartup: { addListener(listener) { startupListener = listener; } },
   },
   commands: { onCommand: { addListener() {} } },
   contextMenus: {
@@ -142,6 +148,7 @@ globalThis.chrome = {
 };
 
 await import('../background.js');
+await Promise.all([installedListener(), startupListener()]);
 await new Promise((resolve) => setTimeout(resolve, 10));
 
 function send(message, sender = {}) {
@@ -158,6 +165,11 @@ function send(message, sender = {}) {
 const extensionSender = { url: 'chrome-extension://studyx-test/options.html' };
 
 test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async () => {
+  assert.equal(
+    storageWrites.filter((write) => write['studyx.companionDeviceId']).length,
+    1,
+    'concurrent install/startup initialization must create one stable companion device ID',
+  );
   const initial = await send({ type: 'studyx.getState' });
   assert.equal(initial.ok, true);
   assert.equal(initial.data.current, null);
@@ -459,6 +471,13 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.ok(data['studyx.scholarSnapshot'].day.ignoredContexts.includes('bus times'));
   assert.ok(dynamicRules.some((rule) => rule.id === 3000));
 
+  const invalidModeSnapshot = structuredClone(summerSnapshot);
+  invalidModeSnapshot.day.mode = 'holiday';
+  await send({ type: 'studyx.saveScholarSnapshot', snapshot: invalidModeSnapshot }, scholarSender);
+  const invalidModeGate = await send({ type: 'studyx.getTikTokStatus' }, extensionSender);
+  assert.equal(invalidModeGate.data.blocked, false, 'an unknown day mode cannot own a screen gate');
+  await send({ type: 'studyx.saveScholarSnapshot', snapshot: summerSnapshot }, scholarSender);
+
   summerSnapshot.day.checklist[0].done = true;
   summerSnapshot.day.screenGate.shouldBlock = true;
   summerSnapshot.day.screenGate.completedGatedItemCount = 0;
@@ -562,19 +581,28 @@ test('counts only validated TikTok foreground heartbeats and enforces the daily 
   const backgroundWindow = await send({
     type: 'studyx.tiktokActivity',
     activity: { visible: true, scrolling: true },
-  }, { tab: { id: 10, active: true, url: 'https://www.tiktok.com/foryou' } });
+  }, { tab: { id: 10, windowId: 3, active: true, url: 'https://www.tiktok.com/foryou' } });
   assert.equal(backgroundWindow.data.counted, false);
+  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 298);
+
+  browserWindowFocused = false;
+  const backgroundBrowser = await send({
+    type: 'studyx.tiktokActivity',
+    activity: { visible: true, scrolling: true, sampleSeconds: 1 },
+  }, { tab: { id: 9, windowId: 3, active: true, url: 'https://www.tiktok.com/foryou' } });
+  browserWindowFocused = true;
+  assert.equal(backgroundBrowser.data.counted, false);
   assert.equal(data['studyx.tiktokUsage'].activeSeconds, 298);
 
   const [counted, concurrent] = await Promise.all([
     send({
       type: 'studyx.tiktokActivity',
       activity: { visible: true, scrolling: true, sampleSeconds: 1 },
-    }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } }),
+    }, { tab: { id: 9, windowId: 3, active: true, url: 'https://www.tiktok.com/foryou' } }),
     send({
       type: 'studyx.tiktokActivity',
       activity: { visible: true, scrolling: true, sampleSeconds: 1 },
-    }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } }),
+    }, { tab: { id: 9, windowId: 3, active: true, url: 'https://www.tiktok.com/foryou' } }),
   ]);
   assert.equal(counted.data.counted, true);
   assert.equal(concurrent.data.counted, true);

@@ -56,6 +56,7 @@ const MAX_CAPTURES = 1500;
 const MAX_EVENTS = 500;
 const MAX_REQUESTS = 200;
 let tiktokActivityTail = Promise.resolve();
+let defaultsPromise = null;
 
 function id(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`;
@@ -298,7 +299,7 @@ async function getSettings() {
   return normalizeSettings(stored[KEYS.settings] || {});
 }
 
-async function ensureDefaults() {
+async function performEnsureDefaults() {
   if (typeof chrome.storage.local.setAccessLevel === 'function') {
     try {
       await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
@@ -340,6 +341,16 @@ async function ensureDefaults() {
   await chrome.alarms.create(COMPANION_ALARM, { periodInMinutes: 0.5 });
 }
 
+function ensureDefaults() {
+  if (!defaultsPromise) {
+    defaultsPromise = performEnsureDefaults().catch((error) => {
+      defaultsPromise = null;
+      throw error;
+    });
+  }
+  return defaultsPromise;
+}
+
 async function queueScholarEvent(type, payload) {
   const stored = await chrome.storage.local.get(KEYS.events);
   const events = Array.isArray(stored[KEYS.events]) ? stored[KEYS.events] : [];
@@ -378,6 +389,7 @@ async function getTikTokStatus() {
   const manualBlocked = Number(usage.manualBlockedUntil) > now;
   const scholarDay = stored[KEYS.scholarSnapshot]?.day;
   const scholarGateBlocked = scholarDay?.date === localDateKey(now) &&
+    ['school', 'summer', 'party'].includes(scholarDay?.mode) &&
     scholarDay?.screenGate?.target === 'tiktok' &&
     scholarDay?.screenGate?.shouldBlock === true &&
     Array.isArray(scholarDay?.screenGate?.incompleteItems) &&
@@ -449,10 +461,14 @@ async function recordTikTokActivity(input, sender) {
   if (!sender?.tab?.active || !isTikTokUrl(sender.tab.url) || input?.visible !== true) {
     return { counted: false, ...(await getTikTokStatus()) };
   }
-  // Chrome can mark one tab active in every window. Count only the active tab in
-  // the last-focused browser window so a visible TikTok tab behind another
-  // window cannot inflate foreground time.
+  // Chrome can mark one tab active in every window, and a document can remain
+  // visible when the entire browser is behind another app. Require both the
+  // currently focused Chrome window and its active TikTok tab.
   try {
+    const focusedWindow = await chrome.windows.getLastFocused();
+    if (!focusedWindow?.focused || focusedWindow.id !== sender.tab.windowId) {
+      return { counted: false, ...(await getTikTokStatus()) };
+    }
     const foregroundTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (!foregroundTabs.some((tab) => tab.id === sender.tab.id)) {
       return { counted: false, ...(await getTikTokStatus()) };

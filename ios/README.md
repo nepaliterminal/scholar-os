@@ -12,6 +12,7 @@ It currently includes:
 - a custom LockIn shield instead of the default blocked screen;
 - shared App Group state for the app and all three Screen Time extensions;
 - a durable monitoring switch, so turning protection off stays off across launches;
+- failure-safe monitoring state, so a failed schedule replacement cannot look active after relaunch;
 - an Apple privacy manifest in every executable bundle for App Group preferences.
 
 ## Open it
