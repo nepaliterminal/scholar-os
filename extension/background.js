@@ -10,6 +10,7 @@ const KEYS = Object.freeze({
   events: 'studyx.scholarEvents',
   recap: 'studyx.pendingRecap',
   scholarContext: 'studyx.scholarContext',
+  lockInSession: 'studyx.lockInSession',
 });
 
 const DEFAULT_SETTINGS = Object.freeze({
@@ -28,7 +29,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   scholarOsUrl: 'https://nepaliterminal.github.io/scholar-os/',
   alexaBridgeUrl: 'http://127.0.0.1:3457',
   alexaBridgeToken: '',
-  settingsVersion: 4,
+  lockInBridgeUrl: 'http://127.0.0.1:3847',
+  lockInBridgeToken: '',
+  settingsVersion: 5,
 });
 
 const SESSION_ALARM = 'studyx.session.end';
@@ -101,6 +104,22 @@ function normalizeSettings(input = {}) {
   } catch {
     alexaBridgeUrl = defaults.alexaBridgeUrl;
   }
+  let lockInBridgeUrl = cleanText(input.lockInBridgeUrl || defaults.lockInBridgeUrl, 500);
+  try {
+    const parsed = new URL(lockInBridgeUrl);
+    if (
+      parsed.protocol !== 'http:' ||
+      !['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname) ||
+      parsed.username ||
+      parsed.password
+    ) {
+      lockInBridgeUrl = defaults.lockInBridgeUrl;
+    } else {
+      lockInBridgeUrl = parsed.origin;
+    }
+  } catch {
+    lockInBridgeUrl = defaults.lockInBridgeUrl;
+  }
   return {
     defaultDuration: Math.round(clampNumber(input.defaultDuration, 5, 180, defaults.defaultDuration)),
     blockedSites: [...new Set(sites.map(normalizeSite).filter(Boolean))].slice(0, BLOCK_RULE_END - BLOCK_RULE_START + 1),
@@ -112,15 +131,19 @@ function normalizeSettings(input = {}) {
     scholarOsUrl,
     alexaBridgeUrl,
     alexaBridgeToken: cleanText(input.alexaBridgeToken, 500),
+    lockInBridgeUrl,
+    lockInBridgeToken: cleanText(input.lockInBridgeToken, 500),
     settingsVersion: defaults.settingsVersion,
   };
 }
 
-function redactAlexaPairing(settings) {
+function redactPrivatePairings(settings) {
   return {
     ...settings,
     alexaBridgeToken: '',
     alexaBridgePaired: Boolean(settings.alexaBridgeToken),
+    lockInBridgeToken: '',
+    lockInBridgePaired: Boolean(settings.lockInBridgeToken),
   };
 }
 
@@ -292,6 +315,13 @@ async function startSession(input) {
   await chrome.alarms.create(SESSION_ALARM, { when: session.endsAt });
   await applyBlockRules();
   await updateBadge(true);
+  try {
+    await startLockInProtection(session, settings);
+  } catch {
+    // Browser focus still works when LockIn is offline or already running a
+    // separately-owned session. Its status card explains how to reconnect.
+    await chrome.storage.local.remove(KEYS.lockInSession);
+  }
   await queueScholarEvent('session.started', {
     sessionId: session.id,
     subject: session.subject,
@@ -306,7 +336,7 @@ async function startSession(input) {
 }
 
 async function finishSession(reason = 'stopped') {
-  const stored = await chrome.storage.local.get([KEYS.current, KEYS.sessions]);
+  const stored = await chrome.storage.local.get([KEYS.current, KEYS.sessions, KEYS.lockInSession]);
   const session = stored[KEYS.current];
   if (!session) return null;
 
@@ -339,6 +369,11 @@ async function finishSession(reason = 'stopped') {
   await chrome.alarms.clear(SESSION_ALARM);
   await chrome.alarms.clear(ACCESS_ALARM);
   await clearBlockRules();
+  try {
+    await stopLockInProtection(stored[KEYS.lockInSession]);
+  } catch {
+    // The LockIn focus timer is still bounded by the original session end.
+  }
   await updateBadge(false, true);
   await queueScholarEvent('session.completed', {
     sessionId: recap.id,
@@ -477,6 +512,9 @@ async function resolveUnblock(input, sender) {
   const allowedUntil = decision === 'approved'
     ? Math.min(session.endsAt, Date.now() + minutes * 60_000)
     : null;
+  if (decision === 'approved') {
+    await temporarilyUnblockInLockIn(session, request.site, minutes);
+  }
   request.status = decision;
   request.resolvedAt = resolvedAt;
   request.allowedUntil = allowedUntil ? new Date(allowedUntil).toISOString() : null;
@@ -573,7 +611,7 @@ async function getState() {
   const events = Array.isArray(stored[KEYS.events]) ? stored[KEYS.events] : [];
   const settings = normalizeSettings(stored[KEYS.settings] || {});
   return {
-    settings: redactAlexaPairing(settings),
+    settings: redactPrivatePairings(settings),
     current,
     pendingRecap: stored[KEYS.recap] || null,
     scholarContext: stored[KEYS.scholarContext] || normalizeScholarContext(),
@@ -647,6 +685,111 @@ function requireExtensionPage(sender) {
   if (!senderIsExtensionPage(sender)) throw new Error('This private action is available only in extension settings.');
 }
 
+async function lockInBridgeRequest(path, requestOptions = {}, settings = null) {
+  const privateSettings = settings || await getSettings();
+  if (!privateSettings.lockInBridgeToken) {
+    throw new Error('Pair LockIn in extension settings first.');
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${privateSettings.lockInBridgeUrl}${path}`, {
+      ...requestOptions,
+      headers: {
+        Authorization: `Bearer ${privateSettings.lockInBridgeToken}`,
+        'Content-Type': 'application/json',
+        ...(requestOptions?.headers || {}),
+      },
+      signal: controller.signal,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.ok) throw new Error(body.error || 'The local LockIn bridge did not respond.');
+    return body.data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('The local LockIn bridge timed out.');
+    if (error instanceof TypeError) throw new Error('Start LockIn on this Mac, then try again.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getLockInStatus(sender) {
+  if (!(await senderIsScholarOs(sender)) && !senderIsExtensionPage(sender)) {
+    throw new Error('ScholarOS LockIn status is not authorized from this page.');
+  }
+  const [status, report] = await Promise.all([
+    lockInBridgeRequest('/bridge/v1/status', { method: 'GET' }),
+    lockInBridgeRequest('/bridge/v1/action', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'get_focus_report', days: 7 }),
+    }),
+  ]);
+  return {
+    ...status,
+    report: {
+      periodDays: 7,
+      focusMinutes: Math.max(0, Math.round(Number(report?.focusMinutes) || 0)),
+      sessionCount: Math.max(0, Math.round(Number(report?.sessionCount) || 0)),
+      completedTasks: Math.max(0, Math.round(Number(report?.completedTasks) || 0)),
+      temporaryAccessRequests: Math.max(0, Math.round(Number(report?.temporaryAccessRequests) || 0)),
+    },
+  };
+}
+
+async function startLockInProtection(session, settings) {
+  await chrome.storage.local.remove(KEYS.lockInSession);
+  if (!settings.lockInBridgeToken || settings.blockedSites.length === 0) return null;
+  const result = await lockInBridgeRequest('/bridge/v1/action', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'enter_focus_mode',
+      domains: settings.blockedSites,
+      durationMinutes: session.durationMinutes,
+      taskDescription: cleanText(session.intention || session.subject, 500) || 'ScholarOS focus session',
+    }),
+  }, settings);
+  const lockInSessionId = cleanText(result?.sessionId, 100);
+  if (!lockInSessionId) throw new Error('LockIn did not return a focus session ID.');
+  const ownership = {
+    studySessionId: session.id,
+    lockInSessionId,
+    startedAt: Date.now(),
+  };
+  await chrome.storage.local.set({ [KEYS.lockInSession]: ownership });
+  return ownership;
+}
+
+async function stopLockInProtection(ownership) {
+  try {
+    if (!ownership?.lockInSessionId) return;
+    await lockInBridgeRequest('/bridge/v1/action', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'exit_focus_mode',
+        sessionId: ownership.lockInSessionId,
+      }),
+    });
+  } finally {
+    await chrome.storage.local.remove(KEYS.lockInSession);
+  }
+}
+
+async function temporarilyUnblockInLockIn(session, site, minutes) {
+  const stored = await chrome.storage.local.get(KEYS.lockInSession);
+  const ownership = stored[KEYS.lockInSession];
+  if (!ownership || ownership.studySessionId !== session.id || !ownership.lockInSessionId) return;
+  await lockInBridgeRequest('/bridge/v1/action', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'temporarily_unblock_domains',
+      domains: [site],
+      durationMinutes: minutes,
+      sessionId: ownership.lockInSessionId,
+    }),
+  });
+}
+
 async function alexaBridgeRequest(path, requestOptions, sender, allowExtensionPage = false) {
   if (!(await senderIsScholarOs(sender)) && !(allowExtensionPage && senderIsExtensionPage(sender))) {
     throw new Error('ScholarOS Alexa control is not authorized from this page.');
@@ -701,15 +844,41 @@ async function sendAlexaCommand(input, sender) {
 
 async function saveSettings(input) {
   const previous = await getSettings();
+  if (input.clearLockInBridgeToken === true && previous.lockInBridgeToken) {
+    const stored = await chrome.storage.local.get(KEYS.lockInSession);
+    const ownership = stored[KEYS.lockInSession];
+    if (ownership?.lockInSessionId) {
+      try {
+        await lockInBridgeRequest('/bridge/v1/action', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'exit_focus_mode',
+            sessionId: ownership.lockInSessionId,
+          }),
+        }, previous);
+        await chrome.storage.local.remove(KEYS.lockInSession);
+      } catch {
+        throw new Error('End the active focus session before forgetting the LockIn pairing.');
+      }
+    }
+  }
   const enteredToken = cleanText(input.alexaBridgeToken, 500);
   const alexaBridgeToken = input.clearAlexaBridgeToken === true
     ? ''
     : enteredToken || previous.alexaBridgeToken;
-  const settings = normalizeSettings({ ...input, alexaBridgeToken });
+  const enteredLockInToken = cleanText(input.lockInBridgeToken, 500);
+  const lockInBridgeToken = input.clearLockInBridgeToken === true
+    ? ''
+    : enteredLockInToken || previous.lockInBridgeToken;
+  const settings = normalizeSettings({
+    ...input,
+    alexaBridgeToken,
+    lockInBridgeToken,
+  });
   await chrome.storage.local.set({ [KEYS.settings]: settings });
   await applyBlockRules();
   await broadcastStateChanged();
-  return redactAlexaPairing(settings);
+  return redactPrivatePairings(settings);
 }
 
 async function getAllData() {
@@ -718,7 +887,7 @@ async function getAllData() {
   return {
     exportedAt: new Date().toISOString(),
     schemaVersion: 1,
-    settings: redactAlexaPairing(settings),
+    settings: redactPrivatePairings(settings),
     currentSession: stored[KEYS.current] || null,
     sessions: stored[KEYS.sessions] || [],
     captures: stored[KEYS.captures] || [],
@@ -755,7 +924,7 @@ async function handleMessage(message, sender) {
       return dismissRecap();
     case 'studyx.getSettings':
       requireExtensionPage(sender);
-      return redactAlexaPairing(await getSettings());
+      return redactPrivatePairings(await getSettings());
     case 'studyx.saveSettings':
       requireExtensionPage(sender);
       return saveSettings(message.settings || {});
@@ -776,6 +945,8 @@ async function handleMessage(message, sender) {
       return getAlexaStatus(sender);
     case 'studyx.alexaCommand':
       return sendAlexaCommand(message.command || {}, sender);
+    case 'studyx.lockInStatus':
+      return getLockInStatus(sender);
     default:
       throw new Error('Unknown Study Session OS message.');
   }

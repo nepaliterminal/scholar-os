@@ -5,7 +5,7 @@ let allData = null;
 
 function settingsFromForm(extra = {}) {
   return {
-    settingsVersion: 4,
+    settingsVersion: 5,
     defaultDuration: Number(byId('defaultDuration').value),
     blockedSites: cleanSiteLines(),
     youtubeShield: byId('youtubeShield').value,
@@ -14,6 +14,8 @@ function settingsFromForm(extra = {}) {
     scholarOsUrl: byId('scholarOsUrl').value.trim(),
     alexaBridgeUrl: byId('alexaBridgeUrl').value.trim(),
     alexaBridgeToken: byId('alexaBridgeToken').value.trim(),
+    lockInBridgeUrl: byId('lockInBridgeUrl').value.trim(),
+    lockInBridgeToken: byId('lockInBridgeToken').value.trim(),
     ...extra,
   };
 }
@@ -101,6 +103,14 @@ async function load() {
     byId('alexaBridgeStatus').textContent = settings.alexaBridgePaired
       ? 'A private pairing token is saved. Enter a new token only to replace it.'
       : 'Not paired yet.';
+    byId('lockInBridgeUrl').value = settings.lockInBridgeUrl;
+    byId('lockInBridgeToken').value = '';
+    byId('lockInBridgeToken').placeholder = settings.lockInBridgePaired
+      ? 'Pairing saved privately'
+      : 'Run npm run pair:extension in the LockIn folder';
+    byId('lockInBridgeStatus').textContent = settings.lockInBridgePaired
+      ? 'A private pairing token is saved. Enter a new token only to replace it.'
+      : 'Not paired yet.';
     updateSiteCount();
     renderRequests(allData.unblockRequests || []);
   } catch (error) {
@@ -120,6 +130,8 @@ byId('settingsForm').addEventListener('submit', async (event) => {
     });
     byId('alexaBridgeToken').value = '';
     byId('alexaBridgeToken').placeholder = settings.alexaBridgePaired ? 'Pairing saved privately' : 'Run npm run bridge:pair in alexainit';
+    byId('lockInBridgeToken').value = '';
+    byId('lockInBridgeToken').placeholder = settings.lockInBridgePaired ? 'Pairing saved privately' : 'Run npm run pair:extension in the LockIn folder';
     byId('blockedSites').value = settings.blockedSites.join('\n');
     updateSiteCount();
     showMessage('Settings saved. Active sessions use the new rules immediately.');
@@ -165,6 +177,39 @@ byId('forgetAlexaPairing').addEventListener('click', async () => {
     byId('alexaBridgeToken').value = '';
     byId('alexaBridgeToken').placeholder = 'Run npm run bridge:pair in alexainit';
     target.textContent = 'Pairing forgotten. Amazon login data on the local bridge was not changed.';
+  } catch (error) {
+    target.textContent = error.message;
+  }
+});
+
+byId('testLockInBridge').addEventListener('click', async () => {
+  const target = byId('lockInBridgeStatus');
+  target.textContent = 'Testing local LockIn bridge…';
+  try {
+    await send('studyx.saveSettings', {
+      settings: settingsFromForm(),
+    });
+    byId('lockInBridgeToken').value = '';
+    byId('lockInBridgeToken').placeholder = 'Pairing saved privately';
+    const status = await send('studyx.lockInStatus');
+    const focus = status.focusMode?.active ? 'focus active' : 'ready';
+    const enforcement = status.enforcementReady ? 'system blocking ready' : 'hosts helper needed';
+    target.textContent = `Connected · ${focus} · ${enforcement}`;
+  } catch (error) {
+    target.textContent = error.message;
+  }
+});
+
+byId('forgetLockInPairing').addEventListener('click', async () => {
+  if (!confirm('Forget the saved LockIn pairing on this Chrome profile?')) return;
+  const target = byId('lockInBridgeStatus');
+  try {
+    await send('studyx.saveSettings', {
+      settings: settingsFromForm({ clearLockInBridgeToken: true, lockInBridgeToken: '' }),
+    });
+    byId('lockInBridgeToken').value = '';
+    byId('lockInBridgeToken').placeholder = 'Run npm run pair:extension in the LockIn folder';
+    target.textContent = 'Pairing forgotten. LockIn files and settings were not changed.';
   } catch (error) {
     target.textContent = error.message;
   }

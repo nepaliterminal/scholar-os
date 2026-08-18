@@ -32,6 +32,10 @@ for (const id of [
   'memoryList',
   'quizQuestion',
   'quizAskAlexaBtn',
+  'lockInConnection',
+  'lockInBlockedCount',
+  'lockInWeekMinutes',
+  'lockInRefreshBtn',
 ]) {
   assert.ok(ids.includes(id), `missing ScholarOS integration element #${id}`);
 }
@@ -45,6 +49,8 @@ for (const marker of [
   'studyStarredSessionIds',
   'SCHOLAROS_ALEXA_REQUEST',
   'STUDYX_ALEXA_RESULT',
+  'SCHOLAROS_LOCKIN_REQUEST',
+  'STUDYX_LOCKIN_RESULT',
   'resolveUnblock',
   'unblock.resolved',
   'nextScholarTask',

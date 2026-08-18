@@ -184,6 +184,11 @@
   .alexa-log-item strong { font-size: .8rem; }
   .alexa-log-item span, .alexa-log-item time { color: var(--muted); font-size: .68rem; }
   .alexa-log-item .failed { color: #a45e4c; }
+  .lockin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 13px; }
+  .lockin-metric { min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+  .lockin-metric strong, .lockin-metric span { display: block; }
+  .lockin-metric strong { color: var(--accent); font: 700 1.15rem Georgia, serif; }
+  .lockin-metric span { margin-top: 3px; color: var(--muted); font-size: .65rem; line-height: 1.25; }
   .scholar-next { margin-top: 11px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
   .scholar-next strong { display: block; font-family: "Fraunces", Georgia, serif; font-size: 1.05rem; }
   .scholar-next span { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; }
@@ -210,6 +215,7 @@
     .alexa-home-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .alexa-home-actions .alexa-button:last-child { grid-column: 1 / -1; }
     .alexa-button-row .alexa-button { flex: 1 1 calc(50% - 4px); }
+    .lockin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 360px) {
     .alexa-home-actions { grid-template-columns: 1fr; }
@@ -537,6 +543,16 @@
       </div>
 
       <div class="card">
+        <h2>🔒 LockIn System Shield</h2>
+        <div class="alexa-status" id="lockInHomeStatus"><i></i><span>Checking local shield…</span></div>
+        <p class="study-note" id="lockInHomeNote">Pair LockIn to carry focus blocking beyond Chrome.</p>
+        <div class="alexa-button-row">
+          <button class="alexa-button" id="lockInHomeRefreshBtn" type="button">Refresh shield</button>
+          <button class="alexa-button" id="lockInHomeSettingsBtn" type="button">Pair in extension</button>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>🧭 Scholar Mode</h2>
         <p class="study-note">One button chooses the most useful next task, starts focus protection, and can announce it on Alexa.</p>
         <div class="scholar-next">
@@ -642,6 +658,23 @@
       <div class="card study-stat"><strong id="studyMinuteTotal">0</strong><span>Focus minutes</span></div>
       <div class="card study-stat"><strong id="studyCaptureTotal">0</strong><span>Captures</span></div>
       <div class="card study-stat"><strong id="studyStarTotal">0</strong><span>Study stars</span></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="study-card-heading">
+        <div><h2>🔒 LockIn System Shield</h2><p class="study-note">System-wide focus enforcement and the last seven days of LockIn activity.</p></div>
+        <div class="alexa-status" id="lockInConnection"><i></i><span>Checking…</span></div>
+      </div>
+      <div class="lockin-metrics">
+        <div class="lockin-metric"><strong id="lockInBlockedCount">0</strong><span>Domains blocked now</span></div>
+        <div class="lockin-metric"><strong id="lockInWeekMinutes">0</strong><span>Focus minutes · 7 days</span></div>
+        <div class="lockin-metric"><strong id="lockInWeekSessions">0</strong><span>Sessions · 7 days</span></div>
+        <div class="lockin-metric"><strong id="lockInAccessCount">0</strong><span>Temporary access · 7 days</span></div>
+      </div>
+      <div class="alexa-button-row">
+        <button class="alexa-button" id="lockInRefreshBtn" type="button">Refresh LockIn</button>
+        <button class="alexa-button" id="lockInSettingsBtn" type="button">Connection settings</button>
+      </div>
+      <p class="alexa-note" id="lockInConnectionNote">Start LockIn and pair it in extension settings.</p>
     </div>
     <div class="hub-grid two study-analytics">
       <div class="card">
@@ -1104,6 +1137,17 @@ let alexaSelectedDeviceId = "";
 let alexaRequestNumber = 0;
 const pendingAlexaRequests = new Map();
 const alexaActionHistory = [];
+let lockInBridgeState = {
+  connected: false,
+  enforcementReady: false,
+  effectiveBlockedDomainCount: 0,
+  temporaryExceptionCount: 0,
+  focusMode: { active: false, endsAt: null },
+  report: { focusMinutes: 0, sessionCount: 0, completedTasks: 0, temporaryAccessRequests: 0 },
+  error: "",
+};
+let lockInRequestNumber = 0;
+const pendingLockInRequests = new Map();
 let scholarUnstuckLevel = 0;
 let quizIndex = 0;
 let quizRevealed = false;
@@ -1137,6 +1181,87 @@ function sendAlexaRequest(operation, command = {}) {
     }, 10000);
     pendingAlexaRequests.set(requestId, { resolve, reject, timeout });
   });
+}
+
+function sendLockInRequest() {
+  if (!studyExtensionAvailable) return Promise.reject(new Error("Study Session OS is not connected."));
+  const requestId = `lockin_${Date.now().toString(36)}_${++lockInRequestNumber}`;
+  postToStudyExtension({ type: "SCHOLAROS_LOCKIN_REQUEST", requestId, operation: "status" });
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingLockInRequests.delete(requestId);
+      reject(new Error("The private LockIn bridge did not respond."));
+    }, 10000);
+    pendingLockInRequests.set(requestId, { resolve, reject, timeout });
+  });
+}
+
+function normalizeLockInStatus(input = {}) {
+  const number = value => Math.max(0, Math.round(Number(value) || 0));
+  return {
+    connected: input.connected === true,
+    enforcementReady: input.enforcementReady === true,
+    effectiveBlockedDomainCount: number(input.effectiveBlockedDomainCount),
+    temporaryExceptionCount: number(input.temporaryExceptionCount),
+    focusMode: {
+      active: input.focusMode?.active === true,
+      endsAt: Number.isFinite(Number(input.focusMode?.endsAt)) ? Number(input.focusMode.endsAt) : null,
+    },
+    report: {
+      focusMinutes: number(input.report?.focusMinutes),
+      sessionCount: number(input.report?.sessionCount),
+      completedTasks: number(input.report?.completedTasks),
+      temporaryAccessRequests: number(input.report?.temporaryAccessRequests),
+    },
+    error: "",
+  };
+}
+
+async function requestLockInStatus() {
+  if (!studyExtensionAvailable) {
+    lockInBridgeState = { ...lockInBridgeState, connected: false, error: "Load the Study Session OS extension first." };
+    renderLockInControls();
+    return;
+  }
+  lockInBridgeState.error = "";
+  renderLockInControls(true);
+  try {
+    lockInBridgeState = normalizeLockInStatus(await sendLockInRequest());
+  } catch (error) {
+    lockInBridgeState = { ...lockInBridgeState, connected: false, enforcementReady: false, error: error.message };
+  }
+  renderLockInControls();
+}
+
+function renderLockInControls(loading = false) {
+  const connected = studyExtensionAvailable && lockInBridgeState.connected;
+  const ready = connected && lockInBridgeState.enforcementReady;
+  const active = ready && lockInBridgeState.focusMode.active;
+  const statusText = loading
+    ? "Checking private bridge…"
+    : active
+      ? "Focus shield active"
+      : ready
+        ? "System shield ready"
+        : connected ? "Hosts helper needed" : studyExtensionAvailable ? "LockIn not connected" : "Extension not detected";
+  setAlexaStatusElement($("lockInConnection"), ready, statusText);
+  setAlexaStatusElement($("lockInHomeStatus"), ready, statusText);
+  $("lockInBlockedCount").textContent = lockInBridgeState.effectiveBlockedDomainCount;
+  $("lockInWeekMinutes").textContent = lockInBridgeState.report.focusMinutes;
+  $("lockInWeekSessions").textContent = lockInBridgeState.report.sessionCount;
+  $("lockInAccessCount").textContent = lockInBridgeState.report.temporaryAccessRequests;
+  const ends = active && lockInBridgeState.focusMode.endsAt
+    ? ` until ${new Date(lockInBridgeState.focusMode.endsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+    : "";
+  const note = active
+    ? `${lockInBridgeState.effectiveBlockedDomainCount} domain${lockInBridgeState.effectiveBlockedDomainCount === 1 ? "" : "s"} blocked system-wide${ends}.`
+    : ready
+      ? "Starting a ScholarOS focus session will activate the same block list across this Mac."
+      : lockInBridgeState.error || "Start LockIn and pair it in extension settings.";
+  $("lockInConnectionNote").textContent = note;
+  $("lockInHomeNote").textContent = note;
+  for (const id of ["lockInRefreshBtn", "lockInHomeRefreshBtn"]) $(id).disabled = !studyExtensionAvailable || loading;
+  for (const id of ["lockInSettingsBtn", "lockInHomeSettingsBtn"]) $(id).disabled = !studyExtensionAvailable;
 }
 
 function normalizeAlexaStatus(input = {}) {
@@ -1930,6 +2055,12 @@ $("alexaRefreshBtn").onclick = requestAlexaStatus;
 $("alexaSettingsBtn").onclick = () => {
   sendStudyCommand("openOptions").catch(error => { $("alexaConnectionNote").textContent = error.message; });
 };
+for (const id of ["lockInRefreshBtn", "lockInHomeRefreshBtn"]) $(id).onclick = requestLockInStatus;
+for (const id of ["lockInSettingsBtn", "lockInHomeSettingsBtn"]) {
+  $(id).onclick = () => {
+    sendStudyCommand("openOptions").catch(error => { $("lockInConnectionNote").textContent = error.message; });
+  };
+}
 for (const button of [$("alexaQuickFocus"), $("alexaFocusBtn")]) {
   button.onclick = () => runAlexaCommand({ action: "announce", text: alexaFocusText() }, "Focus update");
 }
@@ -2021,10 +2152,13 @@ window.addEventListener("message", event => {
     renderStudyLauncher();
     requestStudySync();
     requestAlexaStatus();
+    requestLockInStatus();
   } else if (message.type === "STUDYX_STATE" && message.state) {
+    const priorSessionId = studyExtensionState.current?.id || null;
     studyExtensionAvailable = true;
     studyExtensionState = message.state;
     renderStudyLauncher();
+    if (priorSessionId !== (message.state.current?.id || null)) requestLockInStatus();
     if (Number(message.state.pendingScholarEvents) > 0) {
       postToStudyExtension({ type: "SCHOLAROS_PULL" });
     }
@@ -2045,6 +2179,13 @@ window.addEventListener("message", event => {
     pendingAlexaRequests.delete(message.requestId);
     if (message.ok) pending.resolve(message.data);
     else pending.reject(new Error(message.error || "The private Alexa bridge failed."));
+  } else if (message.type === "STUDYX_LOCKIN_RESULT") {
+    const pending = pendingLockInRequests.get(message.requestId);
+    if (!pending) return;
+    clearTimeout(pending.timeout);
+    pendingLockInRequests.delete(message.requestId);
+    if (message.ok) pending.resolve(message.data);
+    else pending.reject(new Error(message.error || "The private LockIn bridge failed."));
   }
 });
 
@@ -2558,7 +2699,7 @@ function renderAll() {
   renderTexts(); renderSwatches(); renderTables(); renderTodos();
   renderHabits(); renderHabitHistory(); renderBackpack();
   renderRewards(); renderCountdown(); renderDerived();
-  renderStudyData(); renderStudyLauncher(); renderAlexaControls();
+  renderStudyData(); renderStudyLauncher(); renderAlexaControls(); renderLockInControls();
 }
 (function boot() {
   const cur = currentAccount();

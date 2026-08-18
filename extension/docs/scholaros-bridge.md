@@ -59,13 +59,19 @@ The extension posts `STUDYX_BRIDGE_AVAILABLE` when it detects the configured das
 
 ScholarOS can send a `SCHOLAROS_COMMAND` with a unique `commandId`. Version 1 supports `getState`, `startSession`, `stopSession`, `resolveUnblock`, and `openOptions`. `resolveUnblock` accepts a request ID, an `approve`/`deny` decision, and a clamped 1–30 minute duration. Approval is valid only for the active session and ScholarOS account. The extension answers with `STUDYX_COMMAND_RESULT` using the same ID. Commands are accepted only from the exact configured dashboard URL.
 
-The `getState` result sent to ScholarOS is explicitly reduced to the active session, pending recap, and pending-event count. Extension settings—especially the Alexa pairing token—are never included.
+The `getState` result sent to ScholarOS is explicitly reduced to the active session, pending recap, and pending-event count. Extension settings—especially the Alexa and LockIn pairing tokens—are never included.
 
 ## Alexa relay
 
 ScholarOS can send `SCHOLAROS_ALEXA_REQUEST` with a unique `requestId` and either a `status` operation or an allowlisted command. The extension answers with `STUDYX_ALEXA_RESULT`. It authenticates to the bridge itself, so neither the request nor the reply contains the pairing token.
 
 The Alexa bridge must use a loopback HTTP URL and a bearer pairing token stored in the extension's private storage. The website never connects to localhost directly. Device and routine identifiers exposed by the bridge are opaque hashes; names and command text remain memory-only in the open ScholarOS tab. Alexa requests are never added to the durable ScholarOS event outbox.
+
+## LockIn relay
+
+ScholarOS sends `SCHOLAROS_LOCKIN_REQUEST` with a unique `requestId` for sanitized status and seven-day analytics. The extension answers with `STUDYX_LOCKIN_RESULT`. The website never connects to localhost and never receives the LockIn bearer token, raw domain lists, filesystem paths, or top-requested-domain details.
+
+Starting a normal ScholarOS focus session causes the extension to request an `enter_focus_mode` action from LockIn. The returned LockIn session ID stays in private extension storage. Stop and temporary-access actions must present that same ID, which keeps them scoped to the session the extension owns. If the LockIn call fails, browser focus continues and the website status card reports the disconnected system layer.
 
 ## Event envelope
 

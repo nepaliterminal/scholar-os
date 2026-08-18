@@ -16,6 +16,8 @@ ScholarOS is a local-first student dashboard with a connected Chrome extension f
 - Ask Alexa for the next task, a backpack/deadline morning check, a focus announcement, or a progressively more specific “unstuck” hint.
 - Save browser-dictated study notes and flashcards locally, turn extension captures into card drafts, and have Alexa speak quiz prompts.
 - Approve a reasoned website-access request for five minutes—or deny it—from ScholarOS; blocking returns automatically.
+- Pair the local LockIn service so a ScholarOS session applies the same domain shield system-wide, with ownership-safe stop and temporary-access actions.
+- View LockIn readiness, active system blocks, and private seven-day focus totals from the ScholarOS Study Sessions hub.
 
 The integration is local-first. The extension keeps a durable event outbox in `chrome.storage.local`; ScholarOS saves an event before acknowledging it, so closing either interface does not lose study activity.
 
@@ -53,6 +55,17 @@ The companion bridge lives in `/Users/subed/alexainit` on this Mac.
 4. Reload ScholarOS and open **Alexa Controls**.
 
 The Amazon session and bridge token remain in gitignored, owner-only local files. Environment overrides are available, but secrets are not bundled into the website. See `/Users/subed/alexainit/README.md` for the complete boundary.
+
+## Connect LockIn privately
+
+The local enforcement service lives in `/Users/subed/lockinmcp` on this Mac.
+
+1. Build and start LockIn with `npm run build` and `npm start` in that folder.
+2. In a second terminal there, run `npm run pair:extension`. The private token is copied directly to the clipboard and is not printed.
+3. Paste it into **Study Session OS → Extension settings → LockIn**, then select **Test LockIn connection**. Never paste the token into chat or source code.
+4. Reload ScholarOS. The LockIn card will show system blocking readiness and seven-day totals.
+
+Once paired, starting or ending focus in either the ScholarOS dashboard or extension also starts or ends the exact LockIn session created for it. A five-minute access approval temporarily relaxes both browser and system blocking. The extension stores the session ownership privately so it cannot end an unrelated LockIn session.
 
 ## Validate
 

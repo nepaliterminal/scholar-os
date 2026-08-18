@@ -366,6 +366,22 @@
     }
   }
 
+  async function handleScholarLockInRequest(message) {
+    const requestId = String(message.requestId || '').slice(0, 100);
+    if (!requestId) return;
+    try {
+      const data = await send('studyx.lockInStatus');
+      postToScholarOs({ type: 'STUDYX_LOCKIN_RESULT', requestId, ok: true, data });
+    } catch (error) {
+      postToScholarOs({
+        type: 'STUDYX_LOCKIN_RESULT',
+        requestId,
+        ok: false,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
   window.addEventListener('message', async (event) => {
     if (event.source !== window || !isScholarOsPage() || event.data?.source !== 'scholar-os') return;
     if (event.data.type === 'SCHOLAROS_READY' && event.data.context) {
@@ -396,6 +412,7 @@
     }
     if (event.data.type === 'SCHOLAROS_COMMAND') await handleScholarCommand(event.data);
     if (event.data.type === 'SCHOLAROS_ALEXA_REQUEST') await handleScholarAlexaRequest(event.data);
+    if (event.data.type === 'SCHOLAROS_LOCKIN_REQUEST') await handleScholarLockInRequest(event.data);
   });
 
   document.addEventListener('mouseup', (event) => {

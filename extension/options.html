@@ -82,6 +82,25 @@
         <p id="alexaBridgeStatus" class="help"></p>
       </section>
 
+      <section class="card">
+        <div class="card-heading"><div><p class="eyebrow">LockIn</p><h2>System-wide focus shield</h2></div></div>
+        <p class="help">When paired, starting a ScholarOS session also blocks the same sites across this Mac. Ending the session removes only the blocks that ScholarOS started.</p>
+        <label>
+          <span>Bridge URL</span>
+          <input id="lockInBridgeUrl" type="url" placeholder="http://127.0.0.1:3847">
+        </label>
+        <label>
+          <span>Pairing token</span>
+          <input id="lockInBridgeToken" type="password" autocomplete="off" placeholder="Run npm run pair:extension in the LockIn folder">
+        </label>
+        <p class="help">The token stays in private extension storage, is never sent to ScholarOS, and is removed from exports.</p>
+        <div class="button-row">
+          <button id="testLockInBridge" class="small-button" type="button">Test LockIn connection</button>
+          <button id="forgetLockInPairing" class="small-button" type="button">Forget pairing</button>
+        </div>
+        <p id="lockInBridgeStatus" class="help"></p>
+      </section>
+
       <button id="saveButton" class="primary-button" type="submit">Save settings</button>
     </form>
 

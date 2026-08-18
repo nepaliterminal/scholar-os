@@ -130,6 +130,7 @@ try {
     subjectCount: document.querySelector('#studySubject').options.length,
     connectionText: document.querySelector('#studyConnection').innerText,
     alexaText: document.querySelector('#alexaConnection').innerText,
+    lockInText: document.querySelector('#lockInConnection').innerText,
     alexaControlsDisabled: document.querySelector('#alexaSpeakBtn').disabled,
     scholarTask: document.querySelector('#scholarNextTask').innerText,
     autopilotDisabled: document.querySelector('#scholarAutopilotBtn').disabled,
@@ -139,6 +140,7 @@ try {
   assert.ok(initial.subjectCount >= 1);
   assert.match(initial.connectionText, /Extension not detected/);
   assert.match(initial.alexaText, /Extension not detected/);
+  assert.match(initial.lockInText, /Extension not detected/);
   assert.equal(initial.alexaControlsDisabled, true);
   assert.ok(initial.scholarTask.length > 2);
   assert.equal(initial.autopilotDisabled, true);
