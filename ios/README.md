@@ -55,6 +55,8 @@ If the app opens but blocking does not happen, check these in order:
 
 The sources and simulator build can be inspected without paying. Running the complete Screen Time flow on an iPhone or iPad requires code signing and the Family Controls capability. Distribution normally requires an Apple Developer Program membership and Apple’s Family Controls distribution entitlement approval.
 
+Apple references: [supported iOS capabilities](https://developer.apple.com/help/account/reference/supported-capabilities-ios), [configuring Family Controls](https://developer.apple.com/documentation/xcode/configuring-family-controls), and [requesting the distribution entitlement](https://developer.apple.com/documentation/FamilyControls/requesting-the-family-controls-entitlement). Development provisioning and App Store/TestFlight distribution are separate decisions; use the team Xcode can provision for all four targets.
+
 The iOS simulator does not provide real Screen Time usage and cannot enforce a Family Controls shield against another app. In Simulator, LockIn shows an explicit warning and a **Preview blocked screen** button for visual review. Authorize, select TikTok, and test real threshold enforcement on a physical iPhone or iPad.
 
 The **Optional Poke sync** card is unrelated to local enforcement. A physical iPhone or iPad can enforce its saved Screen Time policy without the cloud adapter; the adapter is only for future remote policy changes from Poke.
