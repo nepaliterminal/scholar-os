@@ -54,6 +54,7 @@ The companion bridge lives in `/Users/subed/alexainit` on this Mac.
 2. In a second terminal in the same folder, run `npm run bridge:pair`; the token is copied to the clipboard without being printed.
 3. Paste the token directly into **Study Session OS → Extension settings → Alexa** and select **Test Alexa connection**. Never paste the token into chat or source code.
 4. Reload ScholarOS and open **Alexa Controls**.
+5. After the first successful test, run `npm run bridge:install` so the private bridge returns after login without an open terminal.
 
 The Amazon session and bridge token remain in gitignored, owner-only local files. Environment overrides are available, but secrets are not bundled into the website. See `/Users/subed/alexainit/README.md` for the complete boundary.
 
