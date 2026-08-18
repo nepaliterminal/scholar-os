@@ -333,7 +333,13 @@ try {
   assert.match(pokeCompanion.status, /Poke companion synced/);
   assert.equal(pokeCompanion.legacyBuilderPresent, false);
   assert.ok(['school', 'summer', 'party'].includes(pokeCompanion.requestedMode));
-  assert.equal(pokeCompanion.requestedDate, new Date().toISOString().slice(0, 10));
+  const localNow = new Date();
+  const expectedLocalDate = [
+    localNow.getFullYear(),
+    String(localNow.getMonth() + 1).padStart(2, '0'),
+    String(localNow.getDate()).padStart(2, '0'),
+  ].join('-');
+  assert.equal(pokeCompanion.requestedDate, expectedLocalDate);
 
   const scholarMode = await evaluate(`(async () => {
     const rankedTask = nextScholarTask();
