@@ -187,6 +187,22 @@ try {
     chooseDate('2026-08-22');
     chooseMode('school');
     const restoredSchoolTitle = document.querySelector('#dayPageTitle').value;
+
+    const now = new Date();
+    const today = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+    chooseDate(today);
+    chooseMode('party');
+    document.querySelector('[data-day-gate="0"]').click();
+    const partyGate = window.ScholarOS.getSnapshot().day.screenGate;
+    chooseMode('summer');
+    const summerGate = window.ScholarOS.getSnapshot().day.screenGate;
+    chooseMode('party');
+    const restoredPartyGate = window.ScholarOS.getSnapshot().day.screenGate;
+
     const stored = JSON.parse(localStorage.getItem('scholaros.g6.data.Smoke Test'));
     return {
       restoredPartyTitle,
@@ -197,6 +213,9 @@ try {
       otherDateTitle: stored.dayPlans['2026-08-23'].pages.summer.title,
       dateCount: Object.keys(stored.dayPlans).length,
       snapshotMode: window.ScholarOS.getSnapshot().day.mode,
+      partyGate,
+      summerGate,
+      restoredPartyGate,
     };
   })()`);
   assert.equal(dayPages.restoredPartyTitle, 'Birthday at the park');
@@ -207,6 +226,12 @@ try {
   assert.equal(dayPages.otherDateTitle, 'Pool day');
   assert.ok(dayPages.dateCount >= 3);
   assert.ok(['school', 'summer', 'party'].includes(dayPages.snapshotMode));
+  assert.equal(dayPages.partyGate.shouldBlock, true);
+  assert.match(dayPages.partyGate.reason, /party/i);
+  assert.equal(dayPages.summerGate.shouldBlock, false);
+  assert.equal(dayPages.summerGate.incompleteItems.length, 0);
+  assert.equal(dayPages.restoredPartyGate.shouldBlock, true);
+  assert.equal(dayPages.restoredPartyGate.incompleteItems.length, 1);
 
   const integration = await evaluate(`(() => {
     const completion = {
