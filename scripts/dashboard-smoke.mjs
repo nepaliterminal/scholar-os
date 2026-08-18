@@ -233,6 +233,20 @@ try {
   assert.equal(dayPages.restoredPartyGate.shouldBlock, true);
   assert.equal(dayPages.restoredPartyGate.incompleteItems.length, 1);
 
+  const dayPageReloaded = waitFor('Page.loadEventFired');
+  await call('Page.reload');
+  await dayPageReloaded;
+  await delay(200);
+  const persistedDayPage = await evaluate(`({
+    mode: window.ScholarOS.getSnapshot().day.mode,
+    gate: window.ScholarOS.getSnapshot().day.screenGate,
+    renderedMode: document.querySelector('#todayDayMode').innerText,
+  })`);
+  assert.equal(persistedDayPage.mode, 'party');
+  assert.match(persistedDayPage.renderedMode, /Party/);
+  assert.equal(persistedDayPage.gate.shouldBlock, true);
+  assert.equal(persistedDayPage.gate.incompleteItems.length, 1);
+
   const integration = await evaluate(`(() => {
     const completion = {
       id: 'evt_smoke_completed', version: 1, type: 'session.completed', occurredAt: new Date().toISOString(),
