@@ -134,6 +134,8 @@ try {
     alexaControlsDisabled: document.querySelector('#alexaSpeakBtn').disabled,
     scholarTask: document.querySelector('#scholarNextTask').innerText,
     autopilotDisabled: document.querySelector('#scholarAutopilotBtn').disabled,
+    dayMode: document.querySelector('#todayDayMode').innerText,
+    dayTitle: document.querySelector('#todayDayTitle').innerText,
   })`);
   assert.equal(initial.overlayHidden, true);
   assert.equal(initial.account, 'Smoke Test');
@@ -144,6 +146,63 @@ try {
   assert.equal(initial.alexaControlsDisabled, true);
   assert.ok(initial.scholarTask.length > 2);
   assert.equal(initial.autopilotDisabled, true);
+  assert.ok(initial.dayMode.length > 2);
+  assert.ok(initial.dayTitle.length > 2);
+
+  const dayPages = await evaluate(`(() => {
+    const chooseDate = date => {
+      document.querySelector('#dayPlanDate').value = date;
+      document.querySelector('#dayPlanDate').dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const chooseMode = mode => document.querySelector('[data-day-mode="' + mode + '"]').click();
+    const setTitle = title => {
+      document.querySelector('#dayPageTitle').value = title;
+      document.querySelector('#dayPageTitle').dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    chooseDate('2026-08-22');
+    chooseMode('party');
+    setTitle('Birthday at the park');
+    document.querySelector('#dayPageNotes').value = 'Bring the blue gift bag.';
+    document.querySelector('#dayPageNotes').dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('#dayItemInput').value = 'Bring sunscreen';
+    document.querySelector('#dayItemAddBtn').click();
+    document.querySelector('[data-day-check="0"]').click();
+
+    chooseMode('school');
+    setTitle('Saturday school event');
+    chooseMode('party');
+    const restoredPartyTitle = document.querySelector('#dayPageTitle').value;
+    const restoredPartyNotes = document.querySelector('#dayPageNotes').value;
+    const restoredPartyChecklist = [...document.querySelectorAll('[data-day-item-text]')].map(input => input.value).join(' | ');
+    const restoredPartyDone = document.querySelector('[data-day-check="0"]').checked;
+
+    chooseDate('2026-08-23');
+    chooseMode('summer');
+    setTitle('Pool day');
+    chooseDate('2026-08-22');
+    chooseMode('school');
+    const restoredSchoolTitle = document.querySelector('#dayPageTitle').value;
+    const stored = JSON.parse(localStorage.getItem('scholaros.g6.data.Smoke Test'));
+    return {
+      restoredPartyTitle,
+      restoredPartyNotes,
+      restoredPartyChecklist,
+      restoredPartyDone,
+      restoredSchoolTitle,
+      otherDateTitle: stored.dayPlans['2026-08-23'].pages.summer.title,
+      dateCount: Object.keys(stored.dayPlans).length,
+      snapshotMode: window.ScholarOS.getSnapshot().day.mode,
+    };
+  })()`);
+  assert.equal(dayPages.restoredPartyTitle, 'Birthday at the park');
+  assert.equal(dayPages.restoredPartyNotes, 'Bring the blue gift bag.');
+  assert.match(dayPages.restoredPartyChecklist, /Bring sunscreen/);
+  assert.equal(dayPages.restoredPartyDone, true);
+  assert.equal(dayPages.restoredSchoolTitle, 'Saturday school event');
+  assert.equal(dayPages.otherDateTitle, 'Pool day');
+  assert.ok(dayPages.dateCount >= 3);
+  assert.ok(['school', 'summer', 'party'].includes(dayPages.snapshotMode));
 
   const integration = await evaluate(`(() => {
     const completion = {
@@ -294,7 +353,8 @@ try {
   assert.deepEqual(runtimeErrors, []);
 
   if (process.env.SCHOLAROS_SCREENSHOT) {
-    await evaluate(`document.querySelector('.alexa-home-actions').scrollIntoView({ block: 'center' })`);
+    const screenshotTarget = process.env.SCHOLAROS_SCREENSHOT_TARGET || '.alexa-home-actions';
+    await evaluate(`document.querySelector(${JSON.stringify(screenshotTarget)}).scrollIntoView({ block: 'start' })`);
     await delay(100);
     const screenshot = await call('Page.captureScreenshot', { format: 'png', fromSurface: true });
     await writeFile(process.env.SCHOLAROS_SCREENSHOT, Buffer.from(screenshot.data, 'base64'));
@@ -305,6 +365,7 @@ try {
     accountMigration: true,
     eventSyncRendered: true,
     analyticsRendered: true,
+    dayPagesSeparated: true,
     alexaPersonalDataStayedInMemory: true,
     replaySafeStars: integration.stars,
     crossAccountEventHeld: true,

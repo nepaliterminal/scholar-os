@@ -319,13 +319,17 @@
   /* Mini calendar */
   .mini-cal table { width: 100%; border-collapse: collapse; font-size: .78rem; text-align: center; }
   .mini-cal th { color: var(--muted); font-weight: 600; padding: 3px 0; }
-  .mini-cal td { padding: 4px 0; border-radius: 8px; }
+  .mini-cal td { padding: 1px; border-radius: 8px; }
   .mini-cal td.today { background: var(--accent); color: #fff; font-weight: 700; }
-  .mini-cal td.has-event { color: var(--accent); font-weight: 700; text-decoration: underline; }
+  .mini-cal td.has-event { color: var(--accent); font-weight: 700; }
   .mini-cal .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .mini-cal .cal-head strong { font-size: .85rem; }
-  .mini-cal button { border: none; background: var(--soft); color: var(--ink); border-radius: 8px; width: 26px; height: 26px; cursor: pointer; }
-  .mini-cal button:hover { background: var(--accent); color: #fff; }
+  .mini-cal .cal-head button { border: none; background: var(--soft); color: var(--ink); border-radius: 8px; width: 26px; height: 26px; cursor: pointer; }
+  .mini-cal .cal-head button:hover { background: var(--accent); color: #fff; }
+  .mini-cal td > button { position: relative; width: 100%; min-height: 29px; border: 0; border-radius: 7px; color: inherit; background: transparent; cursor: pointer; font: inherit; }
+  .mini-cal td > button:hover { background: var(--soft); color: var(--accent); }
+  .mini-cal td.today > button:hover { color: var(--ink); }
+  .mini-cal .day-mode-mark { position: absolute; right: 1px; bottom: -2px; font-size: .55rem; line-height: 1; text-decoration: none; }
 
   /* Quick actions */
   .quick a {
@@ -345,6 +349,44 @@
   .hub-tile:hover { transform: translateY(-3px); background: var(--accent); color: #fff; border-color: var(--accent); }
   .hub-tile .ico { font-size: 1.8rem; display: block; margin-bottom: 8px; }
   .hub-tile .lbl { font-size: .82rem; font-weight: 600; }
+
+  /* Day pages */
+  .today-page-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .day-mode-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; color: var(--accent); background: var(--soft); font-size: .72rem; font-weight: 800; }
+  .day-home-progress { height: 8px; margin: 10px 0 8px; overflow: hidden; border-radius: 999px; background: var(--soft); }
+  .day-home-progress i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+  .day-home-link { display: inline-flex; margin-top: 9px; color: var(--accent); font-size: .76rem; font-weight: 750; text-decoration: none; }
+  .day-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-bottom: 14px; }
+  .day-toolbar label { display: grid; gap: 5px; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .day-toolbar input, .day-page-input, .day-page-note, .day-item-add input { border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; color: var(--ink); background: #fff; font: inherit; }
+  .day-toolbar input:focus, .day-page-input:focus, .day-page-note:focus, .day-item-add input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--accent); }
+  .day-mode-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .day-mode-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--card); cursor: pointer; text-align: left; font: inherit; }
+  .day-mode-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .day-mode-card.active { color: #fff; border-color: var(--accent); background: var(--accent); }
+  .day-mode-card .day-icon { font-size: 1.5rem; }
+  .day-mode-card strong, .day-mode-card span { display: block; min-width: 0; }
+  .day-mode-card strong { font-size: .82rem; }
+  .day-mode-card span:last-child { margin-top: 2px; color: var(--muted); font-size: .66rem; }
+  .day-mode-card.active span:last-child { color: rgba(255,255,255,.82); }
+  .day-page-shell { border-top: 5px solid var(--accent); }
+  .day-page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .day-page-heading h2 { margin-bottom: 3px; border: 0; padding: 0; color: var(--ink); font-family: "Fraunces", Georgia, serif; font-size: 1.35rem; letter-spacing: 0; text-transform: none; }
+  .day-page-heading p { color: var(--muted); font-size: .78rem; }
+  .day-progress-text { white-space: nowrap; color: var(--accent); font-size: .74rem; font-weight: 800; }
+  .day-page-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(240px, .8fr); gap: 18px; }
+  .day-field { display: grid; gap: 5px; margin-bottom: 12px; }
+  .day-field > span { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .day-page-note { width: 100%; min-height: 122px; resize: vertical; }
+  .day-checklist { display: grid; gap: 7px; }
+  .day-check-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .day-check-row.done input[type="text"] { color: var(--muted); text-decoration: line-through; }
+  .day-check-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--good); }
+  .day-check-row input[type="text"] { width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: .82rem; }
+  .day-check-row button { border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 1rem; }
+  .day-item-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 9px; }
+  .day-page-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  @media (max-width: 700px) { .day-mode-grid, .day-page-grid { grid-template-columns: 1fr; } }
 
   /* To-do */
   .todo-item { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: .9rem; }
@@ -495,6 +537,7 @@
       <div class="card quick">
         <h2>Quick Actions</h2>
         <div class="group">Navigate</div>
+        <a href="#hub-days">🗓 My Day Pages</a>
         <a href="#hub-academics">📚 School Hub</a>
         <a href="#hub-study">🎯 Study Sessions</a>
         <a href="#hub-alexa">🔊 Alexa Controls</a>
@@ -506,6 +549,18 @@
 
     <!-- Center column -->
     <div class="col">
+      <div class="card">
+        <div class="today-page-head">
+          <h2>🗓 Today’s Page</h2>
+          <span class="day-mode-pill" id="todayDayMode">Loading…</span>
+        </div>
+        <strong class="serif" id="todayDayTitle">Today’s plan</strong>
+        <p class="study-note" id="todayDaySummary"></p>
+        <div class="day-home-progress" aria-hidden="true"><i id="todayDayProgressBar"></i></div>
+        <span class="study-note" id="todayDayProgress"></span>
+        <a class="day-home-link" href="#hub-days" id="openTodayPage">Open today’s separate page →</a>
+      </div>
+
       <div class="card study-card">
         <h2>🎯 Study Session OS</h2>
         <div class="study-connection" id="studyConnection"><i></i><span>Checking extension…</span></div>
@@ -588,6 +643,7 @@
       <div class="card">
         <h2>Hubs</h2>
         <div class="hubs">
+          <a class="hub-tile" href="#hub-days"><span class="ico">🗓</span><span class="lbl">My Day Pages</span></a>
           <a class="hub-tile" href="#hub-study"><span class="ico">🎯</span><span class="lbl">Study Sessions</span></a>
           <a class="hub-tile" href="#hub-alexa"><span class="ico">🔊</span><span class="lbl">Alexa Controls</span></a>
           <a class="hub-tile" href="#hub-academics"><span class="ico">📚</span><span class="lbl">School Hub</span></a>
@@ -649,6 +705,41 @@
   </div>
 
   <!-- ═══ Hub sections ═══ -->
+
+  <section class="hub" id="hub-days">
+    <h2 class="serif">🗓 My Day Pages</h2>
+    <p class="sub">Give every date its own kind of day. School, summer, and party plans keep separate titles, notes, and checklists.</p>
+    <div class="card">
+      <div class="day-toolbar">
+        <label><span>Planning date</span><input id="dayPlanDate" type="date"></label>
+        <button class="alexa-button" id="dayPlanTodayBtn" type="button">Jump to today</button>
+      </div>
+      <div class="day-mode-grid" id="dayModeGrid">
+        <button class="day-mode-card" data-day-mode="school" type="button"><span class="day-icon">🏫</span><span><strong>Regular School</strong><span>Classes, backpack, homework</span></span></button>
+        <button class="day-mode-card" data-day-mode="summer" type="button"><span class="day-icon">☀️</span><span><strong>Summer Day</strong><span>Flexible goals, outside, fun</span></span></button>
+        <button class="day-mode-card" data-day-mode="party" type="button"><span class="day-icon">🎉</span><span><strong>Party / Event</strong><span>Time, prep, things to bring</span></span></button>
+      </div>
+    </div>
+    <div class="card day-page-shell" id="dayPageShell" style="margin-top:20px">
+      <div class="day-page-heading">
+        <div><h2 id="dayPageHeading">Today’s page</h2><p id="dayPageDescription"></p></div>
+        <span class="day-progress-text" id="dayPageProgress">0/0 ready</span>
+      </div>
+      <div class="day-page-grid">
+        <div>
+          <label class="day-field"><span>Page title</span><input class="day-page-input" id="dayPageTitle" type="text" maxlength="120" placeholder="What is happening today?"></label>
+          <span class="alexa-label">Checklist for this page</span>
+          <div class="day-checklist" id="dayChecklist"></div>
+          <div class="day-item-add"><input id="dayItemInput" type="text" maxlength="160" placeholder="Add something for this kind of day"><button class="alexa-button primary" id="dayItemAddBtn" type="button">Add</button></div>
+        </div>
+        <div>
+          <label class="day-field"><span>Notes for this page</span><textarea class="day-page-note" id="dayPageNotes" maxlength="2000" placeholder="Times, locations, reminders, or anything you do not want mixed into another day…"></textarea></label>
+          <div class="day-page-links" id="dayPageLinks"></div>
+          <p class="study-note" id="daySaveStatus">Saved locally in this ScholarOS profile.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="hub" id="hub-study">
     <h2 class="serif">🎯 Study Sessions</h2>
@@ -964,6 +1055,7 @@ const DEFAULTS = {
   ],
   backpack: ["📚 Homework folder", "📖 Library book", "🥪 Lunchbox", "👟 Gym shoes", "✏️ Pencil case", "💧 Water bottle"],
   backpackDays: {},
+  dayPlans: {},
 };
 
 /* ═══════════ Helpers ═══════════ */
@@ -975,6 +1067,33 @@ const fmtDate = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso)
 const money = n => "$" + (parseFloat(n) || 0).toFixed(2);
 const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const todayISO = () => isoOf(new Date());
+const DAY_MODES = Object.freeze({
+  school: {
+    icon: "🏫",
+    label: "Regular School",
+    description: "Classes, backpack, homework, and an after-school reset stay together on this page.",
+    title: "Regular school day",
+    items: ["Pack my backpack", "Check today’s classes", "Finish the most important homework", "Set up tomorrow before relaxing"],
+    links: [["📚 School Hub", "#hub-academics"], ["🎯 Study Sessions", "#hub-study"]],
+  },
+  summer: {
+    icon: "☀️",
+    label: "Summer Day",
+    description: "A flexible page for learning, movement, friends, and screen-time balance.",
+    title: "Summer day",
+    items: ["Choose one useful goal", "Get outside or move my body", "Plan free time instead of drifting", "Reset my space before the day ends"],
+    links: [["🏅 Clubs & Fun", "#hub-extracurriculars"], ["💪 Fitness Hub", "#hub-fitness"]],
+  },
+  party: {
+    icon: "🎉",
+    label: "Party / Event",
+    description: "Event timing, preparation, and things to bring stay away from regular school and summer plans.",
+    title: "Party or special event",
+    items: ["Confirm the time and location", "Choose clothes and get ready", "Prepare a gift, card, or contribution", "Pack everything I need to bring"],
+    links: [["✅ Home To-Dos", "#todoList"], ["🏅 Clubs & Fun", "#hub-extracurriculars"]],
+  },
+});
+let selectedDayPlanDate = todayISO();
 
 /* ═══════════ Accounts ═══════════ */
 const ACC_KEY = "scholaros.g6.accounts";
@@ -1013,6 +1132,7 @@ function loadState(name) {
   S.rewards ??= JSON.parse(JSON.stringify(DEFAULTS.rewards));
   S.backpack ??= [...DEFAULTS.backpack];
   S.backpackDays ??= {};
+  if (!S.dayPlans || Array.isArray(S.dayPlans) || typeof S.dayPlans !== "object") S.dayPlans = {};
   S.settings.schoolStart ??= DEFAULTS.settings.schoolStart;
   // Poke's number — replaces the old placeholder default on existing accounts too
   if (!S.settings.pokeAddress || S.settings.pokeAddress === "poke@poke.com") {
@@ -1052,6 +1172,7 @@ function login(name, skipPin) {
   loadState(name);
   hideOverlay();
   $("accountBtn").textContent = `${acct.avatar || "👤"} ${name}`;
+  selectedDayPlanDate = todayISO();
   setEditing(false);
   renderAll();
   requestStudySync();
@@ -1405,10 +1526,15 @@ function alexaFocusText() {
 
 function alexaPlanText() {
   if (!S) return "Open Scholar OS to choose today's plan.";
+  const todayPage = ensureDayPlan(todayISO());
+  const pageItems = todayPage.page.items.filter(item => !item.done && item.text).slice(0, 4).map(item => item.text);
+  if (todayPage.plan.mode !== "school") {
+    return `${todayPage.config.label}. ${todayPage.page.title || todayPage.config.title}. ${pageItems.length ? `Next: ${pageItems.join(". ")}.` : "The page checklist is complete."}`.slice(0, 250);
+  }
   const openAssignments = S.assignments.filter(item => item.status !== "Completed").sort((a, b) => String(a.due).localeCompare(String(b.due))).slice(0, 3).map(item => item.name);
   const openTodos = S.todos.filter(item => !item.done).slice(0, 3).map(item => item.txt);
   const tasks = [...openAssignments, ...openTodos].slice(0, 4);
-  return (tasks.length ? `Today's plan: ${tasks.join(". ")}.` : "Today's Scholar OS plan is clear. Nice work.").slice(0, 250);
+  return (tasks.length ? `Regular school day. Today's plan: ${tasks.join(". ")}.` : "Regular school day. Today's Scholar OS plan is clear. Nice work.").slice(0, 250);
 }
 
 function daysUntilScholarDate(value) {
@@ -1503,6 +1629,11 @@ function nextScholarSpeech(task = nextScholarTask()) {
 
 function scholarMorningText() {
   if (!S) return "Open Scholar OS for your morning check.";
+  const todayPage = ensureDayPlan(todayISO());
+  if (todayPage.plan.mode !== "school") {
+    const open = todayPage.page.items.filter(item => !item.done && item.text).slice(0, 3).map(item => item.text);
+    return `${todayPage.config.label}. ${todayPage.page.title || todayPage.config.title}. ${open.length ? `Still to do: ${open.join(", ")}.` : "Your page checklist is complete."}`.slice(0, 250);
+  }
   const backpack = todayBackpack();
   const unpacked = S.backpack.filter((_, index) => !backpack[index]).map(item => String(item).replace(/^[^\p{L}\p{N}]+/u, "").trim()).slice(0, 3);
   const soon = scholarTaskCandidates().filter(task => task.days !== null && task.days <= 3).slice(0, 3);
@@ -2193,12 +2324,20 @@ window.ScholarOS = Object.freeze({
   version: 1,
   getSnapshot() {
     if (!S) return null;
+    const todayPage = ensureDayPlan(todayISO());
     return JSON.parse(JSON.stringify({
       account: currentAccount(),
       classes: S.classes,
       assignments: S.assignments,
       stars: S.stars,
       studySessions: S.studySessions,
+      day: {
+        date: todayISO(),
+        mode: todayPage.plan.mode,
+        label: todayPage.config.label,
+        title: todayPage.page.title,
+        checklist: todayPage.page.items.map(item => ({ text: item.text, done: Boolean(item.done) })),
+      },
     }));
   },
   sync: requestStudySync,
@@ -2366,6 +2505,158 @@ function tickClock() {
 }
 tickClock(); setInterval(tickClock, 1000);
 
+/* ═══════════ Date-scoped day pages ═══════════ */
+function inferredDayMode(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "summer";
+  const parsed = new Date(`${date}T12:00:00`);
+  const weekday = parsed.getDay();
+  const schoolStart = /^\d{4}-\d{2}-\d{2}$/.test(S.settings.schoolStart || "")
+    ? S.settings.schoolStart
+    : null;
+  return weekday >= 1 && weekday <= 5 && (!schoolStart || date >= schoolStart) ? "school" : "summer";
+}
+
+function newDayItem(text) {
+  return { id: crypto.randomUUID(), text: String(text).trim().slice(0, 160), done: false };
+}
+
+function ensureDayPlan(date) {
+  let changed = false;
+  let plan = S.dayPlans[date];
+  if (!plan || Array.isArray(plan) || typeof plan !== "object") {
+    plan = { mode: inferredDayMode(date), pages: {}, updatedAt: new Date().toISOString() };
+    S.dayPlans[date] = plan;
+    changed = true;
+  }
+  if (!DAY_MODES[plan.mode]) { plan.mode = inferredDayMode(date); changed = true; }
+  if (!plan.pages || Array.isArray(plan.pages) || typeof plan.pages !== "object") {
+    plan.pages = {};
+    changed = true;
+  }
+  const config = DAY_MODES[plan.mode];
+  let page = plan.pages[plan.mode];
+  if (!page || Array.isArray(page) || typeof page !== "object") {
+    page = {
+      title: config.title,
+      notes: "",
+      items: config.items.map(newDayItem),
+    };
+    plan.pages[plan.mode] = page;
+    changed = true;
+  }
+  if (!Array.isArray(page.items)) { page.items = config.items.map(newDayItem); changed = true; }
+  if (typeof page.title !== "string") { page.title = config.title; changed = true; }
+  if (typeof page.notes !== "string") { page.notes = ""; changed = true; }
+  if (changed) save();
+  return { plan, page, config };
+}
+
+function dayPageProgress(page) {
+  const total = page.items.length;
+  const done = page.items.filter(item => item?.done).length;
+  return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
+}
+
+function renderTodayDayPage() {
+  if (!S) return;
+  const { page, config } = ensureDayPlan(todayISO());
+  const progress = dayPageProgress(page);
+  $("todayDayMode").textContent = `${config.icon} ${config.label}`;
+  $("todayDayTitle").textContent = page.title || config.title;
+  $("todayDaySummary").textContent = config.description;
+  $("todayDayProgress").textContent = `${progress.done}/${progress.total} page items ready`;
+  $("todayDayProgressBar").style.width = `${progress.percent}%`;
+}
+
+function renderDayPlanner() {
+  if (!S) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDayPlanDate)) selectedDayPlanDate = todayISO();
+  const { plan, page, config } = ensureDayPlan(selectedDayPlanDate);
+  $("dayPlanDate").value = selectedDayPlanDate;
+  for (const button of document.querySelectorAll("[data-day-mode]")) {
+    const active = button.dataset.dayMode === plan.mode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  $("dayPageHeading").textContent = `${config.icon} ${config.label} · ${fmtDate(selectedDayPlanDate)}`;
+  $("dayPageDescription").textContent = config.description;
+  $("dayPageTitle").value = page.title;
+  $("dayPageNotes").value = page.notes;
+  const progress = dayPageProgress(page);
+  $("dayPageProgress").textContent = `${progress.done}/${progress.total} ready`;
+  $("dayChecklist").innerHTML = page.items.length
+    ? page.items.map((item, index) => `
+      <label class="day-check-row ${item?.done ? "done" : ""}">
+        <input type="checkbox" data-day-check="${index}" ${item?.done ? "checked" : ""}>
+        <input type="text" data-day-item-text="${index}" maxlength="160" value="${esc(String(item?.text || ""))}" aria-label="Day page checklist item">
+        <button type="button" data-day-item-delete="${index}" aria-label="Remove checklist item">×</button>
+      </label>`).join("")
+    : '<p class="study-empty">This page has no checklist items yet.</p>';
+  $("dayPageLinks").innerHTML = config.links
+    .map(([label, href]) => `<a class="alexa-button" href="${href}">${label}</a>`)
+    .join("");
+  renderTodayDayPage();
+}
+
+function updateSelectedDayPage(mutator) {
+  const { plan, page } = ensureDayPlan(selectedDayPlanDate);
+  mutator(page);
+  plan.updatedAt = new Date().toISOString();
+  save();
+  renderTodayDayPage();
+  renderCal();
+  $("daySaveStatus").textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · only on this date’s page.`;
+}
+
+$("dayPlanDate").onchange = event => {
+  const date = String(event.target.value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  selectedDayPlanDate = date;
+  renderDayPlanner();
+};
+$("dayPlanTodayBtn").onclick = () => { selectedDayPlanDate = todayISO(); renderDayPlanner(); };
+$("dayModeGrid").onclick = event => {
+  const button = event.target.closest("[data-day-mode]");
+  if (!button || !DAY_MODES[button.dataset.dayMode]) return;
+  const { plan } = ensureDayPlan(selectedDayPlanDate);
+  plan.mode = button.dataset.dayMode;
+  plan.updatedAt = new Date().toISOString();
+  save();
+  ensureDayPlan(selectedDayPlanDate);
+  renderDayPlanner();
+  renderCal();
+};
+$("dayPageTitle").oninput = event => updateSelectedDayPage(page => { page.title = event.target.value.slice(0, 120); });
+$("dayPageNotes").oninput = event => updateSelectedDayPage(page => { page.notes = event.target.value.slice(0, 2000); });
+$("dayChecklist").onchange = event => {
+  const checkbox = event.target.closest("[data-day-check]");
+  if (!checkbox) return;
+  updateSelectedDayPage(page => { if (page.items[+checkbox.dataset.dayCheck]) page.items[+checkbox.dataset.dayCheck].done = checkbox.checked; });
+  renderDayPlanner();
+};
+$("dayChecklist").oninput = event => {
+  const input = event.target.closest("[data-day-item-text]");
+  if (!input) return;
+  updateSelectedDayPage(page => { if (page.items[+input.dataset.dayItemText]) page.items[+input.dataset.dayItemText].text = input.value.slice(0, 160); });
+};
+$("dayChecklist").onclick = event => {
+  const button = event.target.closest("[data-day-item-delete]");
+  if (!button) return;
+  updateSelectedDayPage(page => page.items.splice(+button.dataset.dayItemDelete, 1));
+  renderDayPlanner();
+};
+function addDayPageItem() {
+  const input = $("dayItemInput");
+  const text = input.value.trim();
+  if (!text) return;
+  updateSelectedDayPage(page => page.items.push(newDayItem(text)));
+  input.value = "";
+  renderDayPlanner();
+  input.focus();
+}
+$("dayItemAddBtn").onclick = addDayPageItem;
+$("dayItemInput").onkeydown = event => { if (event.key === "Enter") addDayPageItem(); };
+
 /* ═══════════ Mini calendar ═══════════ */
 let calCursor = new Date(); calCursor.setDate(1);
 function renderCal() {
@@ -2383,12 +2674,22 @@ function renderCal() {
     if ((first + d - 1) % 7 === 0 && d > 1) html += "</tr><tr>";
     const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
-    html += `<td class="${isToday ? "today" : eventDays.has(iso) ? "has-event" : ""}">${d}</td>`;
+    const mode = DAY_MODES[S.dayPlans?.[iso]?.mode];
+    const classes = [isToday ? "today" : "", eventDays.has(iso) ? "has-event" : ""].filter(Boolean).join(" ");
+    const label = `${fmtDate(iso)}${mode ? `, ${mode.label}` : ""}${eventDays.has(iso) ? ", school deadline" : ""}`;
+    html += `<td class="${classes}"><button type="button" data-day-date="${iso}" aria-label="${esc(label)}">${d}${mode ? `<span class="day-mode-mark" aria-hidden="true">${mode.icon}</span>` : ""}</button></td>`;
   }
   $("calTable").innerHTML = html + "</tr>";
 }
 $("calPrev").onclick = () => { calCursor.setMonth(calCursor.getMonth() - 1); renderCal(); };
 $("calNext").onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderCal(); };
+$("calTable").onclick = event => {
+  const button = event.target.closest("[data-day-date]");
+  if (!button) return;
+  selectedDayPlanDate = button.dataset.dayDate;
+  renderDayPlanner();
+  location.hash = "hub-days";
+};
 
 /* ═══════════ Progress bars (year / month / week / day) ═══════════ */
 function renderProgress() {
@@ -2618,6 +2919,9 @@ $("backpackAddBtn").onclick = () => {
 function buildReport() {
   const name = currentAccount() || "Me";
   const date = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const todayPage = ensureDayPlan(todayISO());
+  const dayProgress = dayPageProgress(todayPage.page);
+  const nextDayItem = todayPage.page.items.find(item => !item.done && item.text)?.text || "page checklist complete";
   const habits = todayHabits();
   const habitsDone = habits.filter(Boolean).length;
   const bp = todayBackpack();
@@ -2639,6 +2943,8 @@ function buildReport() {
   const lines = [
     `📊 Daily Report — ${name}`,
     date,
+    `🗓 Day page: ${todayPage.config.label} — ${todayPage.page.title || todayPage.config.title}`,
+    `   ${dayProgress.done}/${dayProgress.total} ready · Next: ${nextDayItem}`,
     "",
     `⭐ Stars: ${S.stars} · 🔥 Habit streak: ${habitStreak()} day(s)`,
     `🎯 Focus today: ${todayFocusMinutes} min across ${todaySessions.length} session${todaySessions.length === 1 ? "" : "s"}`,
@@ -2698,7 +3004,7 @@ function renderDerived() {
 function renderAll() {
   renderTexts(); renderSwatches(); renderTables(); renderTodos();
   renderHabits(); renderHabitHistory(); renderBackpack();
-  renderRewards(); renderCountdown(); renderDerived();
+  renderRewards(); renderCountdown(); renderDayPlanner(); renderDerived();
   renderStudyData(); renderStudyLauncher(); renderAlexaControls(); renderLockInControls();
 }
 (function boot() {

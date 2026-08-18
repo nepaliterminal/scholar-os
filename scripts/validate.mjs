@@ -36,6 +36,11 @@ for (const id of [
   'lockInBlockedCount',
   'lockInWeekMinutes',
   'lockInRefreshBtn',
+  'todayDayMode',
+  'dayPlanDate',
+  'dayModeGrid',
+  'dayPageTitle',
+  'dayChecklist',
 ]) {
   assert.ok(ids.includes(id), `missing ScholarOS integration element #${id}`);
 }
@@ -56,6 +61,9 @@ for (const marker of [
   'nextScholarTask',
   'scholarMorningText',
   'scholarHint',
+  'DAY_MODES',
+  'dayPlans',
+  'ensureDayPlan',
 ]) {
   assert.ok(html.includes(marker), `missing bridge marker ${marker}`);
 }
