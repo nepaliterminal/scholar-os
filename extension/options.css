@@ -40,6 +40,8 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); box-sha
 .number-wrap input { width: 80px; border: 0; box-shadow: none; background: transparent; }
 .number-wrap small { color: var(--muted); }
 .check-row { display: grid; grid-template-columns: 20px 1fr; gap: 9px; margin-top: 14px; cursor: pointer; }
+.privacy-box { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: rgb(255 253 248 / 68%); }
+.privacy-box > .help { margin: 6px 0 0; }
 .check-row input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); }
 .check-row span, .check-row strong, .check-row small { display: block; }
 .check-row small { margin-top: 2px; color: var(--muted); font-size: 11px; }

@@ -9,23 +9,23 @@
 <body>
   <main class="block-card">
     <div class="shield" aria-hidden="true">✓</div>
-    <p class="eyebrow">Focus protection</p>
-    <h1>Not part of this session.</h1>
-    <p class="lead"><strong id="blockedSite">This site</strong> is paused while you work on <strong id="sessionSubject">your study goal</strong>.</p>
+    <p id="eyebrow" class="eyebrow">Focus protection</p>
+    <h1 id="headline">Not part of this session.</h1>
+    <p id="lead" class="lead"><strong id="blockedSite">This site</strong> is paused while you work on <strong id="sessionSubject">your study goal</strong>.</p>
 
-    <section class="intention-card">
+    <section id="intentionCard" class="intention-card">
       <span>Your intention</span>
       <p id="sessionIntention">Stay with the next useful step.</p>
     </section>
 
     <div class="time-row">
-      <span>Focus time remaining</span>
+      <span id="timeLabel">Focus time remaining</span>
       <strong id="countdown">--:--</strong>
     </div>
 
     <button id="backButton" class="primary-button" type="button">Return to studying</button>
 
-    <details class="request-panel">
+    <details id="requestPanel" class="request-panel">
       <summary>I need this site for school</summary>
       <p>Explain what you need. The request will sync to the ScholarOS access-request queue.</p>
       <textarea id="requestReason" maxlength="1000" rows="3" placeholder="I need this page because…"></textarea>

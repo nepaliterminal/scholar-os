@@ -3,6 +3,9 @@
 const byId = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const site = params.get('site') || 'this site';
+const blockReason = params.get('reason') || '';
+const isScholarGate = blockReason === 'scholar-gate';
+const isTikTokLimit = blockReason === 'tiktok-limit' || blockReason === 'tiktok-manual' || isScholarGate;
 let session = null;
 let countdownInterval = null;
 let requestPollInterval = null;
@@ -25,6 +28,27 @@ function updateCountdown() {
   const remaining = session.endsAt - Date.now();
   byId('countdown').textContent = countdownText(remaining);
   if (remaining <= 0) location.reload();
+}
+
+function updateTikTokCountdown(blockedUntil) {
+  const remaining = Number(blockedUntil) - Date.now();
+  byId('countdown').textContent = countdownText(remaining);
+  if (remaining <= 0) location.href = 'https://www.tiktok.com/';
+}
+
+async function updateScholarGate() {
+  const status = await send('studyx.getTikTokStatus');
+  if (status.blockReason !== 'scholar_gate') {
+    location.href = 'https://www.tiktok.com/';
+    return;
+  }
+  const gate = status.scholarScreenGate;
+  const incomplete = Array.isArray(gate?.incompleteItems) ? gate.incompleteItems : [];
+  byId('countdown').textContent = `${incomplete.length} left`;
+  byId('sessionIntention').textContent = incomplete
+    .slice(0, 4)
+    .map((item) => item.text)
+    .join(' · ') || 'Return to ScholarOS to refresh today’s list.';
 }
 
 async function checkRequestStatus() {
@@ -64,6 +88,35 @@ function startRequestPolling() {
 async function boot() {
   byId('blockedSite').textContent = site;
   try {
+    if (isTikTokLimit) {
+      const status = await send('studyx.getTikTokStatus');
+      const usedMinutes = Math.floor(status.activeSeconds / 60);
+      const scrollingMinutes = Math.floor(status.scrollingSeconds / 60);
+      byId('eyebrow').textContent = 'TikTok guard';
+      byId('headline').textContent = isScholarGate
+        ? `${status.scholarScreenGate?.label || 'ScholarOS'} comes first.`
+        : blockReason === 'tiktok-manual' ? 'TikTok is paused.' : 'Daily TikTok limit reached.';
+      byId('lead').textContent = isScholarGate
+        ? `${status.scholarScreenGate?.reason || 'Finish today’s required items before screen time.'} ScholarOS is using the ${status.scholarScreenGate?.mode || 'current'} day page—not an inactive school or summer routine.`
+        : blockReason === 'tiktok-manual'
+          ? `Poke paused TikTok for a focused break. Today’s total is ${usedMinutes} minutes, including ${scrollingMinutes} minutes scrolling.`
+          : `You used ${usedMinutes} of ${status.dailyLimitMinutes} minutes today, including ${scrollingMinutes} minutes scrolling.`;
+      byId('intentionCard').hidden = !isScholarGate;
+      if (isScholarGate) byId('intentionCard').querySelector('span').textContent = 'Before screen time';
+      byId('requestPanel').hidden = true;
+      byId('timeLabel').textContent = isScholarGate
+        ? 'Required items'
+        : status.blockReason === 'manual' ? 'Break time remaining' : 'Resets in';
+      byId('backButton').textContent = 'Leave TikTok';
+      if (isScholarGate) {
+        await updateScholarGate();
+        countdownInterval = window.setInterval(() => updateScholarGate().catch(() => {}), 2_000);
+      } else {
+        updateTikTokCountdown(status.blockedUntil);
+        countdownInterval = window.setInterval(() => updateTikTokCountdown(status.blockedUntil), 1000);
+      }
+      return;
+    }
     const state = await send('studyx.getState');
     session = state.current;
     if (session) {

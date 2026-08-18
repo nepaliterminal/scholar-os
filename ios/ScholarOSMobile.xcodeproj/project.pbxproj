@@ -1,0 +1,535 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000020 /* ScholarOSMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000001 /* ScholarOSMobileApp.swift */; };
+		100000000000000000000021 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000002 /* ContentView.swift */; };
+		100000000000000000000022 /* ScreenTimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000003 /* ScreenTimeController.swift */; };
+		100000000000000000000023 /* LockInShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* LockInShared.swift */; };
+		100000000000000000000024 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000005 /* DeviceActivityMonitorExtension.swift */; };
+		100000000000000000000025 /* LockInShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* LockInShared.swift */; };
+		100000000000000000000026 /* ShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000006 /* ShieldConfigurationExtension.swift */; };
+		100000000000000000000027 /* LockInShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* LockInShared.swift */; };
+		100000000000000000000028 /* ShieldActionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000007 /* ShieldActionExtension.swift */; };
+		100000000000000000000029 /* LockInShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000004 /* LockInShared.swift */; };
+		10000000000000000000002A /* ScholarOSDeviceActivityMonitor.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 100000000000000000000011 /* ScholarOSDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		10000000000000000000002B /* ScholarOSShieldConfiguration.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 100000000000000000000012 /* ScholarOSShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		10000000000000000000002C /* ScholarOSShieldAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 100000000000000000000013 /* ScholarOSShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		10000000000000000000002D /* ScholarPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000014 /* ScholarPolicy.swift */; };
+		10000000000000000000002E /* ScholarPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000014 /* ScholarPolicy.swift */; };
+		10000000000000000000002F /* ScholarPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000014 /* ScholarPolicy.swift */; };
+		100000000000000000000030 /* ScholarPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000014 /* ScholarPolicy.swift */; };
+		1000000000000000000000A0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000015 /* PrivacyInfo.xcprivacy */; };
+		1000000000000000000000A1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000015 /* PrivacyInfo.xcprivacy */; };
+		1000000000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000015 /* PrivacyInfo.xcprivacy */; };
+		1000000000000000000000A3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000015 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		100000000000000000000093 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 100000000000000000000050 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 100000000000000000000041;
+			remoteInfo = ScholarOSDeviceActivityMonitor;
+		};
+		100000000000000000000094 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 100000000000000000000050 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 100000000000000000000042;
+			remoteInfo = ScholarOSShieldConfiguration;
+		};
+		100000000000000000000095 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 100000000000000000000050 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 100000000000000000000043;
+			remoteInfo = ScholarOSShieldAction;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		10000000000000000000003A /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				10000000000000000000002A /* ScholarOSDeviceActivityMonitor.appex in Embed App Extensions */,
+				10000000000000000000002B /* ScholarOSShieldConfiguration.appex in Embed App Extensions */,
+				10000000000000000000002C /* ScholarOSShieldAction.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		100000000000000000000001 /* ScholarOSMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScholarOSMobileApp.swift; sourceTree = "<group>"; };
+		100000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		100000000000000000000003 /* ScreenTimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeController.swift; sourceTree = "<group>"; };
+		100000000000000000000004 /* LockInShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockInShared.swift; sourceTree = "<group>"; };
+		100000000000000000000005 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		100000000000000000000006 /* ShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldConfigurationExtension.swift; sourceTree = "<group>"; };
+		100000000000000000000007 /* ShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShieldActionExtension.swift; sourceTree = "<group>"; };
+		100000000000000000000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		100000000000000000000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		10000000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		10000000000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		10000000000000000000000C /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		10000000000000000000000D /* Monitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Monitor.entitlements; sourceTree = "<group>"; };
+		10000000000000000000000E /* ShieldConfiguration.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldConfiguration.entitlements; sourceTree = "<group>"; };
+		10000000000000000000000F /* ShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldAction.entitlements; sourceTree = "<group>"; };
+		100000000000000000000010 /* ScholarOSMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScholarOSMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000011 /* ScholarOSDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScholarOSDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000012 /* ScholarOSShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScholarOSShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000013 /* ScholarOSShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScholarOSShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000014 /* ScholarPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScholarPolicy.swift; sourceTree = "<group>"; };
+		100000000000000000000015 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		100000000000000000000031 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000032 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000033 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000034 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100000000000000000000060 = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000062 /* ScholarOSMobile */,
+				100000000000000000000068 /* PolicyCore */,
+				100000000000000000000063 /* Shared */,
+				100000000000000000000064 /* DeviceActivityMonitor */,
+				100000000000000000000065 /* ShieldConfiguration */,
+				100000000000000000000066 /* ShieldAction */,
+				100000000000000000000067 /* Config */,
+				100000000000000000000061 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		100000000000000000000061 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000010 /* ScholarOSMobile.app */,
+				100000000000000000000011 /* ScholarOSDeviceActivityMonitor.appex */,
+				100000000000000000000012 /* ScholarOSShieldConfiguration.appex */,
+				100000000000000000000013 /* ScholarOSShieldAction.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		100000000000000000000062 /* ScholarOSMobile */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000001 /* ScholarOSMobileApp.swift */,
+				100000000000000000000002 /* ContentView.swift */,
+				100000000000000000000003 /* ScreenTimeController.swift */,
+				100000000000000000000008 /* Info.plist */,
+			);
+			path = ScholarOSMobile;
+			sourceTree = "<group>";
+		};
+		100000000000000000000063 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000004 /* LockInShared.swift */,
+				100000000000000000000015 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		100000000000000000000068 /* PolicyCore */ = {
+			isa = PBXGroup;
+			children = (100000000000000000000014 /* ScholarPolicy.swift */, );
+			path = PolicyCore;
+			sourceTree = "<group>";
+		};
+		100000000000000000000064 /* DeviceActivityMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000005 /* DeviceActivityMonitorExtension.swift */,
+				100000000000000000000009 /* Info.plist */,
+			);
+			path = DeviceActivityMonitor;
+			sourceTree = "<group>";
+		};
+		100000000000000000000065 /* ShieldConfiguration */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000006 /* ShieldConfigurationExtension.swift */,
+				10000000000000000000000A /* Info.plist */,
+			);
+			path = ShieldConfiguration;
+			sourceTree = "<group>";
+		};
+		100000000000000000000066 /* ShieldAction */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000007 /* ShieldActionExtension.swift */,
+				10000000000000000000000B /* Info.plist */,
+			);
+			path = ShieldAction;
+			sourceTree = "<group>";
+		};
+		100000000000000000000067 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				10000000000000000000000C /* App.entitlements */,
+				10000000000000000000000D /* Monitor.entitlements */,
+				10000000000000000000000E /* ShieldConfiguration.entitlements */,
+				10000000000000000000000F /* ShieldAction.entitlements */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		100000000000000000000040 /* ScholarOSMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000081 /* Build configuration list for PBXNativeTarget "ScholarOSMobile" */;
+			buildPhases = (
+				100000000000000000000039 /* Sources */,
+				100000000000000000000031 /* Frameworks */,
+				100000000000000000000035 /* Resources */,
+				10000000000000000000003A /* Embed App Extensions */,
+			);
+			buildRules = ();
+			dependencies = (
+				100000000000000000000090 /* PBXTargetDependency */,
+				100000000000000000000091 /* PBXTargetDependency */,
+				100000000000000000000092 /* PBXTargetDependency */,
+			);
+			name = ScholarOSMobile;
+			productName = ScholarOSMobile;
+			productReference = 100000000000000000000010 /* ScholarOSMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+		100000000000000000000041 /* ScholarOSDeviceActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000082 /* Build configuration list for PBXNativeTarget "ScholarOSDeviceActivityMonitor" */;
+			buildPhases = (
+				10000000000000000000003B /* Sources */,
+				100000000000000000000032 /* Frameworks */,
+				100000000000000000000036 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = ScholarOSDeviceActivityMonitor;
+			productName = ScholarOSDeviceActivityMonitor;
+			productReference = 100000000000000000000011 /* ScholarOSDeviceActivityMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		100000000000000000000042 /* ScholarOSShieldConfiguration */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000083 /* Build configuration list for PBXNativeTarget "ScholarOSShieldConfiguration" */;
+			buildPhases = (
+				10000000000000000000003C /* Sources */,
+				100000000000000000000033 /* Frameworks */,
+				100000000000000000000037 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = ScholarOSShieldConfiguration;
+			productName = ScholarOSShieldConfiguration;
+			productReference = 100000000000000000000012 /* ScholarOSShieldConfiguration.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		100000000000000000000043 /* ScholarOSShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000084 /* Build configuration list for PBXNativeTarget "ScholarOSShieldAction" */;
+			buildPhases = (
+				10000000000000000000003D /* Sources */,
+				100000000000000000000034 /* Frameworks */,
+				100000000000000000000038 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = ScholarOSShieldAction;
+			productName = ScholarOSShieldAction;
+			productReference = 100000000000000000000013 /* ScholarOSShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		100000000000000000000050 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					100000000000000000000040 = {CreatedOnToolsVersion = 26.6; };
+					100000000000000000000041 = {CreatedOnToolsVersion = 26.6; };
+					100000000000000000000042 = {CreatedOnToolsVersion = 26.6; };
+					100000000000000000000043 = {CreatedOnToolsVersion = 26.6; };
+				};
+			};
+			buildConfigurationList = 100000000000000000000080 /* Build configuration list for PBXProject "ScholarOSMobile" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base, );
+			mainGroup = 100000000000000000000060;
+			productRefGroup = 100000000000000000000061 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				100000000000000000000040 /* ScholarOSMobile */,
+				100000000000000000000041 /* ScholarOSDeviceActivityMonitor */,
+				100000000000000000000042 /* ScholarOSShieldConfiguration */,
+				100000000000000000000043 /* ScholarOSShieldAction */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		100000000000000000000035 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1000000000000000000000A0 /* PrivacyInfo.xcprivacy in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000036 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1000000000000000000000A1 /* PrivacyInfo.xcprivacy in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000037 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1000000000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		100000000000000000000038 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1000000000000000000000A3 /* PrivacyInfo.xcprivacy in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		100000000000000000000039 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000020 /* ScholarOSMobileApp.swift in Sources */,
+				100000000000000000000021 /* ContentView.swift in Sources */,
+				100000000000000000000022 /* ScreenTimeController.swift in Sources */,
+				100000000000000000000023 /* LockInShared.swift in Sources */,
+				10000000000000000000002D /* ScholarPolicy.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10000000000000000000003B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000024 /* DeviceActivityMonitorExtension.swift in Sources */,
+				100000000000000000000025 /* LockInShared.swift in Sources */,
+				10000000000000000000002E /* ScholarPolicy.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10000000000000000000003C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000026 /* ShieldConfigurationExtension.swift in Sources */,
+				100000000000000000000027 /* LockInShared.swift in Sources */,
+				10000000000000000000002F /* ScholarPolicy.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10000000000000000000003D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000028 /* ShieldActionExtension.swift in Sources */,
+				100000000000000000000029 /* LockInShared.swift in Sources */,
+				100000000000000000000030 /* ScholarPolicy.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		100000000000000000000090 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 100000000000000000000041 /* ScholarOSDeviceActivityMonitor */; targetProxy = 100000000000000000000093 /* PBXContainerItemProxy */; };
+		100000000000000000000091 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 100000000000000000000042 /* ScholarOSShieldConfiguration */; targetProxy = 100000000000000000000094 /* PBXContainerItemProxy */; };
+		100000000000000000000092 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 100000000000000000000043 /* ScholarOSShieldAction */; targetProxy = 100000000000000000000095 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		100000000000000000000070 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		100000000000000000000071 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		100000000000000000000072 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ScholarOSMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		100000000000000000000073 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/App.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ScholarOSMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		100000000000000000000074 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/Monitor.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = DeviceActivityMonitor/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.monitor;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Debug; };
+		100000000000000000000075 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/Monitor.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = DeviceActivityMonitor/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.monitor;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Release; };
+		100000000000000000000076 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/ShieldConfiguration.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = ShieldConfiguration/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.shieldconfiguration;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Debug; };
+		100000000000000000000077 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/ShieldConfiguration.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = ShieldConfiguration/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.shieldconfiguration;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Release; };
+		100000000000000000000078 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/ShieldAction.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = ShieldAction/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.shieldaction;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Debug; };
+		100000000000000000000079 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			APPLICATION_EXTENSION_API_ONLY = YES;
+			CODE_SIGN_ENTITLEMENTS = Config/ShieldAction.entitlements;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEFINES_MODULE = YES;
+			DEVELOPMENT_TEAM = "";
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = ShieldAction/Info.plist;
+			LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.subed.scholaros.shieldaction;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SKIP_INSTALL = YES;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		100000000000000000000080 /* Build configuration list for PBXProject "ScholarOSMobile" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000070 /* Debug */, 100000000000000000000071 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		100000000000000000000081 /* Build configuration list for PBXNativeTarget "ScholarOSMobile" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000072 /* Debug */, 100000000000000000000073 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		100000000000000000000082 /* Build configuration list for PBXNativeTarget "ScholarOSDeviceActivityMonitor" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000074 /* Debug */, 100000000000000000000075 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		100000000000000000000083 /* Build configuration list for PBXNativeTarget "ScholarOSShieldConfiguration" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000076 /* Debug */, 100000000000000000000077 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		100000000000000000000084 /* Build configuration list for PBXNativeTarget "ScholarOSShieldAction" */ = {isa = XCConfigurationList; buildConfigurations = (100000000000000000000078 /* Debug */, 100000000000000000000079 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = 100000000000000000000050 /* Project object */;
+}

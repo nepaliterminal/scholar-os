@@ -10,7 +10,11 @@ const KEYS = Object.freeze({
   events: 'studyx.scholarEvents',
   recap: 'studyx.pendingRecap',
   scholarContext: 'studyx.scholarContext',
+  scholarSnapshot: 'studyx.scholarSnapshot',
   lockInSession: 'studyx.lockInSession',
+  companionDeviceId: 'studyx.companionDeviceId',
+  processedCompanionCommands: 'studyx.processedCompanionCommands',
+  tiktokUsage: 'studyx.tiktokUsage',
 });
 
 const DEFAULT_SETTINGS = Object.freeze({
@@ -31,14 +35,22 @@ const DEFAULT_SETTINGS = Object.freeze({
   alexaBridgeToken: '',
   lockInBridgeUrl: 'http://127.0.0.1:3847',
   lockInBridgeToken: '',
-  settingsVersion: 5,
+  pokeShareIdentity: false,
+  pokeSharePrivateHistory: false,
+  tiktokTrackingEnabled: true,
+  tiktokDailyLimitMinutes: 30,
+  settingsVersion: 7,
 });
 
 const SESSION_ALARM = 'studyx.session.end';
 const ACCESS_ALARM = 'studyx.allowances.expire';
+const COMPANION_ALARM = 'studyx.lockin.companion.sync';
 const LEGACY_LOCAL_SCHOLAR_OS_URL = 'file:///Users/subed/notion1/scholar-os/index.html';
 const BLOCK_RULE_START = 1000;
 const BLOCK_RULE_END = 1999;
+const TIKTOK_RULE_ID = 3000;
+const TIKTOK_SAMPLE_SECONDS = 5;
+const TIKTOK_MAX_SAMPLE_SECONDS = 10;
 const MAX_SESSIONS = 200;
 const MAX_CAPTURES = 1500;
 const MAX_EVENTS = 500;
@@ -82,6 +94,47 @@ function normalizeSite(value) {
   return site;
 }
 
+function localDateKey(timestamp = Date.now()) {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function nextLocalMidnight(timestamp = Date.now()) {
+  const date = new Date(timestamp);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime();
+}
+
+function normalizeTikTokUsage(input = {}, now = Date.now()) {
+  const today = localDateKey(now);
+  const sameDay = cleanText(input.date, 20) === today;
+  const manualBlockedUntil = Number(input.manualBlockedUntil) > now
+    ? Math.round(Number(input.manualBlockedUntil))
+    : null;
+  return {
+    date: today,
+    activeSeconds: sameDay ? Math.max(0, Math.round(Number(input.activeSeconds) || 0)) : 0,
+    scrollingSeconds: sameDay ? Math.max(0, Math.round(Number(input.scrollingSeconds) || 0)) : 0,
+    lastSampleAt: sameDay ? Math.max(0, Math.round(Number(input.lastSampleAt) || 0)) : 0,
+    limitReachedAt: sameDay && Number(input.limitReachedAt) > 0
+      ? Math.round(Number(input.limitReachedAt))
+      : null,
+    manualBlockedUntil,
+    updatedAt: Math.max(0, Math.round(Number(input.updatedAt) || now)),
+  };
+}
+
+function isTikTokUrl(value) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com');
+  } catch {
+    return false;
+  }
+}
+
 function normalizeSettings(input = {}) {
   const defaults = cloneDefaults();
   const settingsVersion = Number(input.settingsVersion || 1);
@@ -107,9 +160,9 @@ function normalizeSettings(input = {}) {
   let lockInBridgeUrl = cleanText(input.lockInBridgeUrl || defaults.lockInBridgeUrl, 500);
   try {
     const parsed = new URL(lockInBridgeUrl);
+    const loopbackHttp = parsed.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname);
     if (
-      parsed.protocol !== 'http:' ||
-      !['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname) ||
+      (!loopbackHttp && parsed.protocol !== 'https:') ||
       parsed.username ||
       parsed.password
     ) {
@@ -133,6 +186,15 @@ function normalizeSettings(input = {}) {
     alexaBridgeToken: cleanText(input.alexaBridgeToken, 500),
     lockInBridgeUrl,
     lockInBridgeToken: cleanText(input.lockInBridgeToken, 500),
+    pokeShareIdentity: input.pokeShareIdentity === true,
+    pokeSharePrivateHistory: input.pokeSharePrivateHistory === true,
+    tiktokTrackingEnabled: input.tiktokTrackingEnabled !== false,
+    tiktokDailyLimitMinutes: Math.round(clampNumber(
+      input.tiktokDailyLimitMinutes,
+      5,
+      1_440,
+      defaults.tiktokDailyLimitMinutes,
+    )),
     settingsVersion: defaults.settingsVersion,
   };
 }
@@ -154,6 +216,79 @@ function normalizeScholarContext(input = {}) {
     classes: [...new Set(classes.map((value) => cleanText(value, 100)).filter(Boolean))].slice(0, 100),
     stars: Math.max(0, Math.round(clampNumber(input.stars, 0, 1_000_000, 0))),
     updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeScholarSnapshot(input) {
+  if (!input || typeof input !== 'object') return null;
+  const classes = Array.isArray(input.classes) ? input.classes : [];
+  const assignments = Array.isArray(input.assignments) ? input.assignments : [];
+  const studySessions = Array.isArray(input.studySessions) ? input.studySessions : [];
+  const checklist = Array.isArray(input.day?.checklist) ? input.day.checklist : [];
+  const ignoredContexts = Array.isArray(input.day?.ignoredContexts) ? input.day.ignoredContexts : [];
+  const normalizedChecklist = checklist.slice(0, 100).map((item) => ({
+    id: cleanText(item?.id, 200),
+    text: cleanText(item?.text, 300),
+    done: item?.done === true,
+    beforeScreenTime: item?.beforeScreenTime === true,
+  })).filter((item) => item.text);
+  const gatedItems = normalizedChecklist.filter((item) => item.beforeScreenTime);
+  const incompleteItems = gatedItems.filter((item) => !item.done);
+  const dayLabel = cleanText(input.day?.label, 100);
+  const gateSubject = dayLabel.toLowerCase() || 'ScholarOS';
+  return {
+    generatedAt: cleanText(input.generatedAt, 50),
+    account: cleanText(input.account, 100) || null,
+    classes: classes.slice(0, 100).map((item) => ({
+      name: cleanText(item?.name, 100),
+      program: cleanText(item?.program, 100),
+      schedule: cleanText(item?.schedule, 200),
+      period: typeof item?.period === 'number' ? item.period : cleanText(item?.period, 50),
+      grade: cleanText(item?.grade, 50),
+      target: cleanText(item?.target, 100),
+    })).filter((item) => item.name),
+    assignments: assignments.slice(0, 500).map((item) => ({
+      name: cleanText(item?.name, 300),
+      cls: cleanText(item?.cls, 100),
+      type: cleanText(item?.type, 100),
+      due: cleanText(item?.due, 30),
+      priority: cleanText(item?.priority, 50),
+      status: cleanText(item?.status, 50),
+    })).filter((item) => item.name),
+    stars: Math.max(0, Math.round(clampNumber(input.stars, 0, 1_000_000, 0))),
+    studySessions: studySessions.slice(-100).map((item) => ({
+      subject: cleanText(item?.subject, 100),
+      intention: cleanText(item?.intention, 500),
+      focusedMinutes: Math.max(0, Number(item?.focusedMinutes) || 0),
+      completed: item?.completed === true,
+      endedAt: typeof item?.endedAt === 'number' ? Math.max(0, item.endedAt) : cleanText(item?.endedAt, 50),
+    })),
+    day: {
+      date: cleanText(input.day?.date, 30),
+      mode: ['school', 'summer', 'party'].includes(input.day?.mode) ? input.day.mode : null,
+      source: ['manual', 'inferred'].includes(input.day?.source) ? input.day.source : 'inferred',
+      label: dayLabel,
+      description: cleanText(input.day?.description, 500),
+      title: cleanText(input.day?.title, 300),
+      notes: cleanText(input.day?.notes, 2_000),
+      updatedAt: cleanText(input.day?.updatedAt, 50),
+      contextId: cleanText(input.day?.contextId, 300),
+      ignoredContexts: ignoredContexts
+        .map((value) => cleanText(value, 100))
+        .filter(Boolean)
+        .slice(0, 30),
+      checklist: normalizedChecklist,
+      screenGate: {
+        target: 'tiktok',
+        shouldBlock: incompleteItems.length > 0,
+        gatedItemCount: gatedItems.length,
+        completedGatedItemCount: gatedItems.length - incompleteItems.length,
+        incompleteItems: incompleteItems.map((item) => ({ id: item.id, text: item.text })),
+        reason: incompleteItems.length
+          ? `${incompleteItems.length} ${gateSubject} item${incompleteItems.length === 1 ? '' : 's'} must be completed before screen time.`
+          : null,
+      },
+    },
   };
 }
 
@@ -179,6 +314,10 @@ async function ensureDefaults() {
     KEYS.allowances,
     KEYS.events,
     KEYS.scholarContext,
+    KEYS.scholarSnapshot,
+    KEYS.companionDeviceId,
+    KEYS.processedCompanionCommands,
+    KEYS.tiktokUsage,
   ]);
   const updates = {};
   updates[KEYS.settings] = normalizeSettings(stored[KEYS.settings] || {});
@@ -188,7 +327,16 @@ async function ensureDefaults() {
   if (!Array.isArray(stored[KEYS.allowances])) updates[KEYS.allowances] = [];
   if (!Array.isArray(stored[KEYS.events])) updates[KEYS.events] = [];
   if (!stored[KEYS.scholarContext]) updates[KEYS.scholarContext] = normalizeScholarContext();
+  if (!stored[KEYS.scholarSnapshot]) updates[KEYS.scholarSnapshot] = null;
+  if (!/^[0-9a-f-]{36}$/i.test(String(stored[KEYS.companionDeviceId] || ''))) {
+    updates[KEYS.companionDeviceId] = crypto.randomUUID();
+  }
+  if (!Array.isArray(stored[KEYS.processedCompanionCommands])) {
+    updates[KEYS.processedCompanionCommands] = [];
+  }
+  updates[KEYS.tiktokUsage] = normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {});
   await chrome.storage.local.set(updates);
+  await chrome.alarms.create(COMPANION_ALARM, { periodInMinutes: 0.5 });
 }
 
 async function queueScholarEvent(type, payload) {
@@ -217,10 +365,170 @@ async function clearBlockRules() {
   }
 }
 
+async function getTikTokStatus() {
+  const [settings, stored] = await Promise.all([
+    getSettings(),
+    chrome.storage.local.get([KEYS.tiktokUsage, KEYS.scholarSnapshot]),
+  ]);
+  const now = Date.now();
+  const usage = normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {}, now);
+  const autoBlocked = settings.tiktokTrackingEnabled &&
+    usage.activeSeconds >= settings.tiktokDailyLimitMinutes * 60;
+  const manualBlocked = Number(usage.manualBlockedUntil) > now;
+  const scholarDay = stored[KEYS.scholarSnapshot]?.day;
+  const scholarGateBlocked = scholarDay?.date === localDateKey(now) &&
+    scholarDay?.screenGate?.target === 'tiktok' &&
+    scholarDay?.screenGate?.shouldBlock === true &&
+    Array.isArray(scholarDay?.screenGate?.incompleteItems) &&
+    scholarDay.screenGate.incompleteItems.length > 0;
+  const blockedUntil = manualBlocked
+    ? usage.manualBlockedUntil
+    : autoBlocked || scholarGateBlocked ? nextLocalMidnight(now) : null;
+  return {
+    date: usage.date,
+    activeSeconds: usage.activeSeconds,
+    scrollingSeconds: Math.min(usage.activeSeconds, usage.scrollingSeconds),
+    dailyLimitMinutes: settings.tiktokDailyLimitMinutes,
+    trackingEnabled: settings.tiktokTrackingEnabled,
+    limitReached: autoBlocked,
+    blocked: autoBlocked || manualBlocked || scholarGateBlocked,
+    blockReason: manualBlocked
+      ? 'manual'
+      : autoBlocked
+        ? 'daily_limit'
+        : scholarGateBlocked ? 'scholar_gate' : null,
+    blockedUntil,
+    scholarScreenGate: scholarGateBlocked ? {
+      contextId: cleanText(scholarDay.contextId, 300),
+      mode: scholarDay.mode,
+      label: scholarDay.label,
+      title: scholarDay.title,
+      reason: scholarDay.screenGate.reason,
+      incompleteItems: scholarDay.screenGate.incompleteItems,
+    } : null,
+    updatedAt: usage.updatedAt,
+  };
+}
+
+async function applyTikTokRule() {
+  const status = await getTikTokStatus();
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  const hasRule = existing.some((rule) => rule.id === TIKTOK_RULE_ID);
+  if (!status.blocked) {
+    if (hasRule) {
+      await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [TIKTOK_RULE_ID] });
+    }
+    return status;
+  }
+  const reason = status.blockReason === 'manual'
+    ? 'tiktok-manual'
+    : status.blockReason === 'scholar_gate' ? 'scholar-gate' : 'tiktok-limit';
+  const rule = {
+    id: TIKTOK_RULE_ID,
+    priority: 2,
+    action: {
+      type: 'redirect',
+      redirect: {
+        url: `${chrome.runtime.getURL('blocked.html')}?site=tiktok.com&reason=${reason}`,
+      },
+    },
+    condition: {
+      urlFilter: '||tiktok.com^',
+      resourceTypes: ['main_frame'],
+    },
+  };
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: hasRule ? [TIKTOK_RULE_ID] : [],
+    addRules: [rule],
+  });
+  return status;
+}
+
+async function recordTikTokActivity(input, sender) {
+  if (!sender?.tab?.active || !isTikTokUrl(sender.tab.url) || input?.visible !== true) {
+    return { counted: false, ...(await getTikTokStatus()) };
+  }
+  const settings = await getSettings();
+  if (!settings.tiktokTrackingEnabled) return { counted: false, ...(await getTikTokStatus()) };
+
+  const now = Date.now();
+  const stored = await chrome.storage.local.get(KEYS.tiktokUsage);
+  const usage = normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {}, now);
+  const elapsedSeconds = usage.lastSampleAt > 0
+    ? Math.min(TIKTOK_MAX_SAMPLE_SECONDS, Math.max(0, Math.round((now - usage.lastSampleAt) / 1_000)))
+    : TIKTOK_SAMPLE_SECONDS;
+  if (elapsedSeconds > 0) {
+    usage.activeSeconds += elapsedSeconds;
+    if (input?.scrolling === true) usage.scrollingSeconds += elapsedSeconds;
+  }
+  usage.scrollingSeconds = Math.min(usage.activeSeconds, usage.scrollingSeconds);
+  usage.lastSampleAt = now;
+  usage.updatedAt = now;
+  if (!usage.limitReachedAt && usage.activeSeconds >= settings.tiktokDailyLimitMinutes * 60) {
+    usage.limitReachedAt = now;
+  }
+  await chrome.storage.local.set({ [KEYS.tiktokUsage]: usage });
+  const status = await applyTikTokRule();
+  if (status.blocked && Number.isInteger(sender.tab.id) && typeof chrome.tabs.update === 'function') {
+    const reason = status.blockReason === 'manual'
+      ? 'tiktok-manual'
+      : status.blockReason === 'scholar_gate' ? 'scholar-gate' : 'tiktok-limit';
+    await chrome.tabs.update(sender.tab.id, {
+      url: `${chrome.runtime.getURL('blocked.html')}?site=tiktok.com&reason=${reason}`,
+    }).catch(() => {});
+  }
+  return { counted: elapsedSeconds > 0, ...status };
+}
+
+async function redirectOpenTikTokTabs(reason) {
+  if (typeof chrome.tabs.update !== 'function') return;
+  const tabs = await chrome.tabs.query({
+    url: ['*://tiktok.com/*', '*://*.tiktok.com/*'],
+  }).catch(() => []);
+  await Promise.allSettled(tabs
+    .filter((tab) => Number.isInteger(tab.id))
+    .map((tab) => chrome.tabs.update(tab.id, {
+      url: `${chrome.runtime.getURL('blocked.html')}?site=tiktok.com&reason=${reason}`,
+    })));
+}
+
+async function setTikTokPolicy(input = {}) {
+  const previous = await getSettings();
+  const settings = normalizeSettings({
+    ...previous,
+    tiktokTrackingEnabled: input.trackingEnabled !== false,
+    tiktokDailyLimitMinutes: input.dailyLimitMinutes,
+  });
+  await chrome.storage.local.set({ [KEYS.settings]: settings });
+  const status = await applyTikTokRule();
+  if (status.blocked) {
+    const reason = status.blockReason === 'manual'
+      ? 'tiktok-manual'
+      : status.blockReason === 'scholar_gate' ? 'scholar-gate' : 'tiktok-limit';
+    await redirectOpenTikTokTabs(reason);
+  }
+  await broadcastStateChanged();
+  return status;
+}
+
+async function blockTikTokNow(input = {}) {
+  const durationMinutes = Math.round(clampNumber(input.durationMinutes, 1, 1_440, 60));
+  const now = Date.now();
+  const stored = await chrome.storage.local.get(KEYS.tiktokUsage);
+  const usage = normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {}, now);
+  usage.manualBlockedUntil = now + durationMinutes * 60_000;
+  usage.updatedAt = now;
+  await chrome.storage.local.set({ [KEYS.tiktokUsage]: usage });
+  const status = await applyTikTokRule();
+  await redirectOpenTikTokTabs('tiktok-manual');
+  return { ...status, durationMinutes };
+}
+
 async function applyBlockRules() {
   const stored = await chrome.storage.local.get([KEYS.current, KEYS.allowances]);
   const session = stored[KEYS.current];
   await clearBlockRules();
+  await applyTikTokRule();
   await chrome.alarms.clear(ACCESS_ALARM);
   if (!session || session.endsAt <= Date.now()) return;
 
@@ -482,6 +790,10 @@ async function recordBlockedAttempt(site, reason = '', countAttempt = true) {
 
 async function resolveUnblock(input, sender) {
   if (!(await senderIsScholarOs(sender))) throw new Error('ScholarOS bridge origin is not authorized.');
+  return resolveUnblockAuthorized(input);
+}
+
+async function resolveUnblockAuthorized(input) {
   await finishExpiredSession();
   const requestId = cleanText(input.requestId, 200);
   const decision = input.decision === 'approve' ? 'approved' : input.decision === 'deny' ? 'denied' : '';
@@ -677,6 +989,19 @@ async function saveScholarContext(input, sender) {
   return context;
 }
 
+async function saveScholarSnapshot(input, sender) {
+  if (!(await senderIsScholarOs(sender))) throw new Error('ScholarOS bridge origin is not authorized.');
+  const snapshot = normalizeScholarSnapshot(input);
+  if (!snapshot) throw new Error('ScholarOS snapshot is invalid.');
+  await chrome.storage.local.set({ [KEYS.scholarSnapshot]: snapshot });
+  const tiktokStatus = await applyTikTokRule();
+  if (tiktokStatus.blockReason === 'scholar_gate') {
+    await redirectOpenTikTokTabs('scholar-gate');
+  }
+  void syncCompanion();
+  return { saved: true, screenGate: snapshot.day.screenGate };
+}
+
 function senderIsExtensionPage(sender) {
   return String(sender?.url || '').startsWith(chrome.runtime.getURL(''));
 }
@@ -693,7 +1018,7 @@ async function lockInBridgeRequest(path, requestOptions = {}, settings = null) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch(`${privateSettings.lockInBridgeUrl}${path}`, {
+    const request = {
       ...requestOptions,
       headers: {
         Authorization: `Bearer ${privateSettings.lockInBridgeToken}`,
@@ -701,32 +1026,242 @@ async function lockInBridgeRequest(path, requestOptions = {}, settings = null) {
         ...(requestOptions?.headers || {}),
       },
       signal: controller.signal,
-    });
+    };
+    const target = new URL(privateSettings.lockInBridgeUrl);
+    if (target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname)) {
+      request.targetAddressSpace = 'loopback';
+    }
+    const response = await fetch(`${privateSettings.lockInBridgeUrl}${path}`, request);
     const body = await response.json().catch(() => ({}));
     if (!response.ok || !body.ok) throw new Error(body.error || 'The local LockIn bridge did not respond.');
     return body.data;
   } catch (error) {
     if (error?.name === 'AbortError') throw new Error('The local LockIn bridge timed out.');
-    if (error instanceof TypeError) throw new Error('Start LockIn on this Mac, then try again.');
+    if (error instanceof TypeError) {
+      throw new Error('Start LockIn, or use its active HTTPS tunnel URL if Chrome blocks localhost.');
+    }
     throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
 
+async function getCompanionDeviceId(storedValue = '') {
+  let deviceId = String(storedValue || '');
+  if (!/^[0-9a-f-]{36}$/i.test(deviceId)) {
+    deviceId = crypto.randomUUID();
+    await chrome.storage.local.set({ [KEYS.companionDeviceId]: deviceId });
+  }
+  return deviceId;
+}
+
+async function buildCompanionSnapshot() {
+  const stored = await chrome.storage.local.get([
+    KEYS.current,
+    KEYS.sessions,
+    KEYS.requests,
+    KEYS.scholarContext,
+    KEYS.scholarSnapshot,
+    KEYS.companionDeviceId,
+  ]);
+  const deviceId = await getCompanionDeviceId(stored[KEYS.companionDeviceId]);
+  const context = stored[KEYS.scholarContext] || normalizeScholarContext();
+  const current = stored[KEYS.current];
+  const sessions = Array.isArray(stored[KEYS.sessions]) ? stored[KEYS.sessions] : [];
+  const requests = Array.isArray(stored[KEYS.requests]) ? stored[KEYS.requests] : [];
+  const tiktok = await getTikTokStatus();
+  const settings = await getSettings();
+  const dashboard = normalizeScholarSnapshot(stored[KEYS.scholarSnapshot]);
+  if (dashboard) {
+    if (!settings.pokeShareIdentity) dashboard.account = null;
+    if (!settings.pokeSharePrivateHistory) {
+      dashboard.studySessions = [];
+      delete dashboard.day.notes;
+    }
+  }
+  return {
+    deviceId,
+    extensionVersion: chrome.runtime.getManifest?.().version || '0.7.0',
+    scholarContext: {
+      account: settings.pokeShareIdentity ? cleanText(context.account, 100) || null : null,
+      classes: (Array.isArray(context.classes) ? context.classes : [])
+        .map((value) => cleanText(value, 100))
+        .filter(Boolean)
+        .slice(0, 100),
+      stars: Math.max(0, Math.round(Number(context.stars) || 0)),
+    },
+    browser: {
+      currentSession: current ? {
+        id: cleanText(current.id, 200),
+        subject: cleanText(current.subject, 100),
+        intention: cleanText(current.intention, 500),
+        durationMinutes: Math.max(1, Math.round(Number(current.durationMinutes) || 1)),
+        startedAt: Math.max(0, Math.round(Number(current.startedAt) || 0)),
+        endsAt: Math.max(0, Math.round(Number(current.endsAt) || 0)),
+        blockedAttempts: Math.max(0, Math.round(Number(current.blockedAttempts) || 0)),
+      } : null,
+      pendingAccessRequests: requests
+        .filter((request) => request?.status === 'pending')
+        .slice(0, 100)
+        .map((request) => ({
+          id: cleanText(request.id, 200),
+          sessionId: cleanText(request.sessionId, 200) || null,
+          subject: cleanText(request.subject, 100) || null,
+          site: cleanText(request.site, 253),
+          reason: cleanText(request.reason, 1000),
+          createdAt: cleanText(request.createdAt, 50),
+        })),
+      recentSessions: sessions
+        .filter((session) => Number.isFinite(Number(session?.endedAt)))
+        .filter(() => settings.pokeSharePrivateHistory)
+        .slice(0, 20)
+        .map((session) => ({
+          id: cleanText(session.id, 200),
+          subject: cleanText(session.subject, 100),
+          intention: cleanText(session.intention, 500),
+          durationMinutes: Math.max(0, Number(session.durationMinutes) || 0),
+          elapsedMinutes: Math.max(0, Number(session.elapsedMinutes) || 0),
+          completed: session.completed === true,
+          blockedAttempts: Math.max(0, Math.round(Number(session.blockedAttempts) || 0)),
+          endedAt: Math.max(0, Math.round(Number(session.endedAt) || 0)),
+        })),
+      tiktok,
+    },
+    dashboard,
+  };
+}
+
+async function acknowledgeCompanionCommand(processed) {
+  const stored = await chrome.storage.local.get(KEYS.companionDeviceId);
+  const body = {
+    commandId: processed.id,
+    deviceId: await getCompanionDeviceId(stored[KEYS.companionDeviceId]),
+    status: processed.status,
+    result: processed.result,
+  };
+  if (processed.error) body.error = processed.error;
+  return lockInBridgeRequest('/bridge/v1/companion/ack', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+async function runCompanionCommand(command) {
+  const commandId = cleanText(command?.id, 100);
+  if (!commandId) return;
+  const stored = await chrome.storage.local.get(KEYS.processedCompanionCommands);
+  const processedCommands = Array.isArray(stored[KEYS.processedCompanionCommands])
+    ? stored[KEYS.processedCompanionCommands]
+    : [];
+  const previous = processedCommands.find((item) => item?.id === commandId);
+  if (previous) {
+    await acknowledgeCompanionCommand(previous).catch(() => {});
+    return;
+  }
+
+  let processed;
+  try {
+    let result;
+    if (command.type === 'start_session') {
+      const session = await startSession(command.payload || {});
+      result = {
+        sessionId: session.id,
+        subject: session.subject,
+        intention: session.intention,
+        durationMinutes: session.durationMinutes,
+        startedAt: session.startedAt,
+        endsAt: session.endsAt,
+      };
+    } else if (command.type === 'stop_session') {
+      const recap = await finishSession('poke');
+      result = recap ? {
+        stopped: true,
+        sessionId: recap.id,
+        elapsedMinutes: recap.elapsedMinutes,
+        completed: recap.completed,
+      } : { stopped: false, reason: 'No browser focus session was active.' };
+    } else if (command.type === 'resolve_access_request') {
+      result = await resolveUnblockAuthorized(command.payload || {});
+    } else if (command.type === 'set_tiktok_policy') {
+      result = await setTikTokPolicy(command.payload || {});
+    } else if (command.type === 'block_tiktok') {
+      result = await blockTikTokNow(command.payload || {});
+    } else {
+      throw new Error('Unsupported Poke companion command.');
+    }
+    processed = { id: commandId, status: 'completed', result, error: null };
+  } catch (error) {
+    processed = {
+      id: commandId,
+      status: 'failed',
+      result: null,
+      error: cleanText(error?.message || error, 500) || 'Command failed.',
+    };
+  }
+  processedCommands.push(processed);
+  await chrome.storage.local.set({
+    [KEYS.processedCompanionCommands]: processedCommands.slice(-100),
+  });
+  await acknowledgeCompanionCommand(processed).catch(() => {});
+}
+
+let companionSyncPromise = null;
+
+async function performCompanionSync() {
+  const settings = await getSettings();
+  if (!settings.lockInBridgeToken) return { connected: false, commandsProcessed: 0 };
+  const first = await lockInBridgeRequest('/bridge/v1/companion/sync', {
+    method: 'POST',
+    body: JSON.stringify(await buildCompanionSnapshot()),
+  }, settings);
+  const commands = Array.isArray(first?.commands) ? first.commands : [];
+  for (const command of commands) await runCompanionCommand(command);
+  if (commands.length > 0) {
+    await lockInBridgeRequest('/bridge/v1/companion/sync', {
+      method: 'POST',
+      body: JSON.stringify(await buildCompanionSnapshot()),
+    }, settings);
+  }
+  return { connected: true, commandsProcessed: commands.length };
+}
+
+function syncCompanion() {
+  if (!companionSyncPromise) {
+    companionSyncPromise = performCompanionSync().finally(() => {
+      companionSyncPromise = null;
+    });
+  }
+  return companionSyncPromise;
+}
+
 async function getLockInStatus(sender) {
   if (!(await senderIsScholarOs(sender)) && !senderIsExtensionPage(sender)) {
     throw new Error('ScholarOS LockIn status is not authorized from this page.');
   }
-  const [status, report] = await Promise.all([
+  const companionSync = await syncCompanion().catch(() => ({ connected: false, commandsProcessed: 0 }));
+  const [status, report, settings] = await Promise.all([
     lockInBridgeRequest('/bridge/v1/status', { method: 'GET' }),
     lockInBridgeRequest('/bridge/v1/action', {
       method: 'POST',
       body: JSON.stringify({ action: 'get_focus_report', days: 7 }),
     }),
+    getSettings(),
   ]);
   return {
     ...status,
+    companion: {
+      connected: companionSync.connected === true && status.companion?.connected === true,
+      lastSeenAt: status.companion?.lastSeenAt != null && Number.isFinite(Number(status.companion.lastSeenAt))
+        ? Number(status.companion.lastSeenAt)
+        : null,
+      secondsSinceSync: status.companion?.secondsSinceSync != null && Number.isFinite(Number(status.companion.secondsSinceSync))
+        ? Math.max(0, Math.round(Number(status.companion.secondsSinceSync)))
+        : null,
+      pendingCommandCount: Math.max(0, Math.round(Number(status.companion?.pendingCommandCount) || 0)),
+      extensionVersion: cleanText(status.companion?.extensionVersion, 30) || null,
+      identityShared: settings.pokeShareIdentity === true,
+      privateHistoryShared: settings.pokeSharePrivateHistory === true,
+    },
     report: {
       periodDays: 7,
       focusMinutes: Math.max(0, Math.round(Number(report?.focusMinutes) || 0)),
@@ -877,6 +1412,13 @@ async function saveSettings(input) {
   });
   await chrome.storage.local.set({ [KEYS.settings]: settings });
   await applyBlockRules();
+  const tiktokStatus = await getTikTokStatus();
+  if (tiktokStatus.blocked) {
+    const reason = tiktokStatus.blockReason === 'manual'
+      ? 'tiktok-manual'
+      : tiktokStatus.blockReason === 'scholar_gate' ? 'scholar-gate' : 'tiktok-limit';
+    await redirectOpenTikTokTabs(reason);
+  }
   await broadcastStateChanged();
   return redactPrivatePairings(settings);
 }
@@ -895,6 +1437,7 @@ async function getAllData() {
     siteAllowances: stored[KEYS.allowances] || [],
     scholarEvents: stored[KEYS.events] || [],
     scholarContext: stored[KEYS.scholarContext] || normalizeScholarContext(),
+    tiktokUsage: normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {}),
   };
 }
 
@@ -912,6 +1455,8 @@ async function handleMessage(message, sender) {
       return saveCapture(message.capture || {}, sender);
     case 'studyx.blockedAttempt':
       return recordBlockedAttempt(message.site);
+    case 'studyx.tiktokActivity':
+      return recordTikTokActivity(message.activity || {}, sender);
     case 'studyx.requestUnblock':
       return recordBlockedAttempt(message.site, message.reason, false);
     case 'studyx.resolveUnblock':
@@ -925,6 +1470,9 @@ async function handleMessage(message, sender) {
     case 'studyx.getSettings':
       requireExtensionPage(sender);
       return redactPrivatePairings(await getSettings());
+    case 'studyx.getTikTokStatus':
+      requireExtensionPage(sender);
+      return getTikTokStatus();
     case 'studyx.saveSettings':
       requireExtensionPage(sender);
       return saveSettings(message.settings || {});
@@ -941,12 +1489,17 @@ async function handleMessage(message, sender) {
       return acknowledgeScholarEvents(message.eventIds, sender);
     case 'studyx.saveScholarContext':
       return saveScholarContext(message.context || {}, sender);
+    case 'studyx.saveScholarSnapshot':
+      return saveScholarSnapshot(message.snapshot || {}, sender);
     case 'studyx.alexaStatus':
       return getAlexaStatus(sender);
     case 'studyx.alexaCommand':
       return sendAlexaCommand(message.command || {}, sender);
     case 'studyx.lockInStatus':
       return getLockInStatus(sender);
+    case 'studyx.syncCompanion':
+      requireExtensionPage(sender);
+      return syncCompanion();
     default:
       throw new Error('Unknown Study Session OS message.');
   }
@@ -962,6 +1515,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === SESSION_ALARM) finishSession('timer').catch(console.error);
   if (alarm.name === ACCESS_ALARM) applyBlockRules().catch(console.error);
+  if (alarm.name === COMPANION_ALARM) {
+    applyTikTokRule().catch(() => {});
+    syncCompanion().catch(() => {});
+  }
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
@@ -987,6 +1544,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   });
   await finishExpiredSession();
   await applyBlockRules();
+  await syncCompanion().catch(() => {});
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -995,6 +1553,12 @@ chrome.runtime.onStartup.addListener(async () => {
   await applyBlockRules();
   const stored = await chrome.storage.local.get(KEYS.current);
   await updateBadge(Boolean(stored[KEYS.current]));
+  await syncCompanion().catch(() => {});
 });
 
-ensureDefaults().catch(console.error);
+ensureDefaults()
+  .then(async () => {
+    await applyTikTokRule();
+    await syncCompanion();
+  })
+  .catch(console.error);

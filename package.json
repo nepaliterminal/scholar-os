@@ -4,7 +4,8 @@
   "private": true,
   "description": "A local-first student dashboard with the Study Session OS Chrome extension.",
   "scripts": {
-    "check": "node scripts/validate.mjs && npm --prefix extension run check",
-    "check:browser": "node scripts/dashboard-smoke.mjs"
+    "check": "node scripts/validate.mjs && node scripts/validate-ios.mjs && npm --prefix extension run check",
+    "check:browser": "node scripts/dashboard-smoke.mjs",
+    "check:ios": "node scripts/validate-ios.mjs && swift test --package-path ios"
   }
 }

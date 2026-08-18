@@ -379,11 +379,14 @@
   .day-field > span { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
   .day-page-note { width: 100%; min-height: 122px; resize: vertical; }
   .day-checklist { display: grid; gap: 7px; }
-  .day-check-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .day-check-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto 28px; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
   .day-check-row.done input[type="text"] { color: var(--muted); text-decoration: line-through; }
   .day-check-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--good); }
   .day-check-row input[type="text"] { width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: .82rem; }
   .day-check-row button { border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 1rem; }
+  .day-gate-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 999px; color: var(--muted); background: var(--soft); cursor: pointer; font-size: .62rem; font-weight: 800; white-space: nowrap; }
+  .day-gate-toggle:has(input:checked) { color: #fff; background: var(--accent); }
+  .day-gate-toggle input { margin: 0; accent-color: var(--accent); }
   .day-item-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 9px; }
   .day-page-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   @media (max-width: 700px) { .day-mode-grid, .day-page-grid { grid-template-columns: 1fr; } }
@@ -633,11 +636,10 @@
       </div>
 
       <div class="card study-card">
-        <h2>📤 Daily Report</h2>
-        <p>Send Poke AI a summary of your day — habits, homework, stars, and more.</p>
-        <button class="study-btn" id="reportBtn">📮 Send Daily Report to Poke</button>
+        <h2>✨ Poke AI Companion</h2>
+        <p>Ask Poke “what should I do now?” It uses today’s School, Summer, or Party page through the private LockIn connection.</p>
+        <button class="study-btn" id="reportBtn">↻ Sync Poke now</button>
         <div class="study-note" id="reportNote"></div>
-        <div class="edit-only" style="margin-top:10px;font-size:.78rem;color:var(--muted)">Poke email or phone #: <span data-edit-text="pokeAddress">+1 (650) 422-9093</span></div>
       </div>
 
       <div class="card">
@@ -729,6 +731,7 @@
         <div>
           <label class="day-field"><span>Page title</span><input class="day-page-input" id="dayPageTitle" type="text" maxlength="120" placeholder="What is happening today?"></label>
           <span class="alexa-label">Checklist for this page</span>
+          <p class="study-note">Turn on “Before screen time” only for items that should temporarily gate TikTok until they are completed.</p>
           <div class="day-checklist" id="dayChecklist"></div>
           <div class="day-item-add"><input id="dayItemInput" type="text" maxlength="160" placeholder="Add something for this kind of day"><button class="alexa-button primary" id="dayItemAddBtn" type="button">Add</button></div>
         </div>
@@ -766,6 +769,7 @@
         <button class="alexa-button" id="lockInSettingsBtn" type="button">Connection settings</button>
       </div>
       <p class="alexa-note" id="lockInConnectionNote">Start LockIn and pair it in extension settings.</p>
+      <p class="alexa-note" id="lockInPokeStatus">Poke companion is waiting for the extension.</p>
     </div>
     <div class="hub-grid two study-analytics">
       <div class="card">
@@ -955,7 +959,7 @@
     </div>
   </section>
 
-  <footer>Scholar OS keeps dashboard data in this browser. It is shared only when you choose an action such as Alexa or Daily Report.</footer>
+  <footer>Scholar OS keeps dashboard data in this browser. Alexa receives only actions you press; Poke receives only the fields shown in Extension settings → LockIn → Poke sharing.</footer>
 </div>
 
 <script>
@@ -1074,6 +1078,7 @@ const DAY_MODES = Object.freeze({
     description: "Classes, backpack, homework, and an after-school reset stay together on this page.",
     title: "Regular school day",
     items: ["Pack my backpack", "Check today’s classes", "Finish the most important homework", "Set up tomorrow before relaxing"],
+    ignoredContexts: ["summer routine", "party or event preparation"],
     links: [["📚 School Hub", "#hub-academics"], ["🎯 Study Sessions", "#hub-study"]],
   },
   summer: {
@@ -1082,6 +1087,7 @@ const DAY_MODES = Object.freeze({
     description: "A flexible page for learning, movement, friends, and screen-time balance.",
     title: "Summer day",
     items: ["Choose one useful goal", "Get outside or move my body", "Plan free time instead of drifting", "Reset my space before the day ends"],
+    ignoredContexts: ["school schedule", "bus times", "classes", "backpack routine", "school-day homework routine", "party preparation"],
     links: [["🏅 Clubs & Fun", "#hub-extracurriculars"], ["💪 Fitness Hub", "#hub-fitness"]],
   },
   party: {
@@ -1090,10 +1096,12 @@ const DAY_MODES = Object.freeze({
     description: "Event timing, preparation, and things to bring stay away from regular school and summer plans.",
     title: "Party or special event",
     items: ["Confirm the time and location", "Choose clothes and get ready", "Prepare a gift, card, or contribution", "Pack everything I need to bring"],
+    ignoredContexts: ["school schedule", "bus times", "classes", "backpack routine", "ordinary school routine", "summer routine"],
     links: [["✅ Home To-Dos", "#todoList"], ["🏅 Clubs & Fun", "#hub-extracurriculars"]],
   },
 });
 let selectedDayPlanDate = todayISO();
+let daySyncTimer = null;
 
 /* ═══════════ Accounts ═══════════ */
 const ACC_KEY = "scholaros.g6.accounts";
@@ -1134,10 +1142,6 @@ function loadState(name) {
   S.backpackDays ??= {};
   if (!S.dayPlans || Array.isArray(S.dayPlans) || typeof S.dayPlans !== "object") S.dayPlans = {};
   S.settings.schoolStart ??= DEFAULTS.settings.schoolStart;
-  // Poke's number — replaces the old placeholder default on existing accounts too
-  if (!S.settings.pokeAddress || S.settings.pokeAddress === "poke@poke.com") {
-    S.settings.pokeAddress = "+1 (650) 422-9093";
-  }
   save();
 }
 function save() { if (S) localStorage.setItem(dataKey(currentAccount()), JSON.stringify(S)); }
@@ -1265,6 +1269,15 @@ let lockInBridgeState = {
   temporaryExceptionCount: 0,
   focusMode: { active: false, endsAt: null },
   report: { focusMinutes: 0, sessionCount: 0, completedTasks: 0, temporaryAccessRequests: 0 },
+  companion: {
+    connected: false,
+    lastSeenAt: null,
+    secondsSinceSync: null,
+    pendingCommandCount: 0,
+    extensionVersion: null,
+    identityShared: false,
+    privateHistoryShared: false,
+  },
   error: "",
 };
 let lockInRequestNumber = 0;
@@ -1334,6 +1347,15 @@ function normalizeLockInStatus(input = {}) {
       completedTasks: number(input.report?.completedTasks),
       temporaryAccessRequests: number(input.report?.temporaryAccessRequests),
     },
+    companion: {
+      connected: input.companion?.connected === true,
+      lastSeenAt: input.companion?.lastSeenAt != null && Number.isFinite(Number(input.companion.lastSeenAt)) ? Number(input.companion.lastSeenAt) : null,
+      secondsSinceSync: input.companion?.secondsSinceSync != null && Number.isFinite(Number(input.companion.secondsSinceSync)) ? number(input.companion.secondsSinceSync) : null,
+      pendingCommandCount: number(input.companion?.pendingCommandCount),
+      extensionVersion: input.companion?.extensionVersion ? String(input.companion.extensionVersion).slice(0, 30) : null,
+      identityShared: input.companion?.identityShared === true,
+      privateHistoryShared: input.companion?.privateHistoryShared === true,
+    },
     error: "",
   };
 }
@@ -1381,6 +1403,16 @@ function renderLockInControls(loading = false) {
       : lockInBridgeState.error || "Start LockIn and pair it in extension settings.";
   $("lockInConnectionNote").textContent = note;
   $("lockInHomeNote").textContent = note;
+  const companion = lockInBridgeState.companion;
+  const privacy = [
+    companion.identityShared ? "profile name shared" : "profile name private",
+    companion.privateHistoryShared ? "history + day notes shared" : "history + day notes private",
+  ].join(" · ");
+  $("lockInPokeStatus").textContent = companion.connected
+    ? `Poke companion synced ${companion.secondsSinceSync === 0 ? "just now" : `${companion.secondsSinceSync}s ago`} · ${privacy}${companion.pendingCommandCount ? ` · ${companion.pendingCommandCount} command${companion.pendingCommandCount === 1 ? "" : "s"} waiting` : ""}.`
+    : connected
+      ? `Poke companion is waiting for an extension sync · ${privacy}.`
+      : "Poke companion is offline until LockIn and the extension are paired.";
   for (const id of ["lockInRefreshBtn", "lockInHomeRefreshBtn"]) $(id).disabled = !studyExtensionAvailable || loading;
   for (const id of ["lockInSettingsBtn", "lockInHomeSettingsBtn"]) $(id).disabled = !studyExtensionAvailable;
 }
@@ -1837,6 +1869,20 @@ function advanceQuiz(correct) {
   renderStudyMemory();
 }
 
+function buildScholarSnapshot() {
+  if (!S) return null;
+  const day = buildDayContext(todayISO());
+  return JSON.parse(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    account: currentAccount(),
+    classes: S.classes,
+    assignments: S.assignments,
+    stars: S.stars,
+    studySessions: S.studySessions,
+    day,
+  }));
+}
+
 function requestStudySync() {
   if (!S) return;
   postToStudyExtension({
@@ -1846,6 +1892,7 @@ function requestStudySync() {
       classes: S.classes.map(item => item.name).filter(Boolean),
       stars: S.stars,
     },
+    snapshot: buildScholarSnapshot(),
   });
   if (studyExtensionAvailable) {
     sendStudyCommand("getState").then(state => {
@@ -2323,22 +2370,7 @@ window.addEventListener("message", event => {
 window.ScholarOS = Object.freeze({
   version: 1,
   getSnapshot() {
-    if (!S) return null;
-    const todayPage = ensureDayPlan(todayISO());
-    return JSON.parse(JSON.stringify({
-      account: currentAccount(),
-      classes: S.classes,
-      assignments: S.assignments,
-      stars: S.stars,
-      studySessions: S.studySessions,
-      day: {
-        date: todayISO(),
-        mode: todayPage.plan.mode,
-        label: todayPage.config.label,
-        title: todayPage.page.title,
-        checklist: todayPage.page.items.map(item => ({ text: item.text, done: Boolean(item.done) })),
-      },
-    }));
+    return buildScholarSnapshot();
   },
   sync: requestStudySync,
   processEvents: processStudyEvents,
@@ -2517,18 +2549,32 @@ function inferredDayMode(date) {
 }
 
 function newDayItem(text) {
-  return { id: crypto.randomUUID(), text: String(text).trim().slice(0, 160), done: false };
+  return {
+    id: crypto.randomUUID(),
+    text: String(text).trim().slice(0, 160),
+    done: false,
+    beforeScreenTime: false,
+  };
 }
 
 function ensureDayPlan(date) {
   let changed = false;
   let plan = S.dayPlans[date];
   if (!plan || Array.isArray(plan) || typeof plan !== "object") {
-    plan = { mode: inferredDayMode(date), pages: {}, updatedAt: new Date().toISOString() };
+    plan = {
+      mode: inferredDayMode(date),
+      source: "inferred",
+      pages: {},
+      updatedAt: new Date().toISOString(),
+    };
     S.dayPlans[date] = plan;
     changed = true;
   }
   if (!DAY_MODES[plan.mode]) { plan.mode = inferredDayMode(date); changed = true; }
+  if (!["manual", "inferred"].includes(plan.source)) {
+    plan.source = plan.mode === inferredDayMode(date) ? "inferred" : "manual";
+    changed = true;
+  }
   if (!plan.pages || Array.isArray(plan.pages) || typeof plan.pages !== "object") {
     plan.pages = {};
     changed = true;
@@ -2545,10 +2591,72 @@ function ensureDayPlan(date) {
     changed = true;
   }
   if (!Array.isArray(page.items)) { page.items = config.items.map(newDayItem); changed = true; }
+  page.items = page.items.slice(0, 100).map(item => {
+    if (!item || typeof item !== "object") {
+      changed = true;
+      return newDayItem(String(item || ""));
+    }
+    const normalized = {
+      id: typeof item.id === "string" && item.id ? item.id : crypto.randomUUID(),
+      text: String(item.text || "").slice(0, 160),
+      done: item.done === true,
+      beforeScreenTime: item.beforeScreenTime === true,
+    };
+    if (
+      normalized.id !== item.id ||
+      normalized.text !== item.text ||
+      normalized.done !== item.done ||
+      normalized.beforeScreenTime !== item.beforeScreenTime
+    ) changed = true;
+    return normalized;
+  });
   if (typeof page.title !== "string") { page.title = config.title; changed = true; }
   if (typeof page.notes !== "string") { page.notes = ""; changed = true; }
   if (changed) save();
   return { plan, page, config };
+}
+
+function buildDayContext(date) {
+  const { plan, page, config } = ensureDayPlan(date);
+  const checklist = page.items
+    .filter(item => item?.text)
+    .map(item => ({
+      id: String(item.id),
+      text: String(item.text).slice(0, 160),
+      done: item.done === true,
+      beforeScreenTime: item.beforeScreenTime === true,
+    }));
+  const gatedItems = checklist.filter(item => item.beforeScreenTime);
+  const incompleteItems = gatedItems.filter(item => !item.done);
+  const updatedAt = typeof plan.updatedAt === "string" ? plan.updatedAt : new Date().toISOString();
+  return {
+    date,
+    mode: plan.mode,
+    source: plan.source,
+    label: config.label,
+    description: config.description,
+    title: String(page.title || config.title).slice(0, 120),
+    notes: String(page.notes || "").slice(0, 2000),
+    updatedAt,
+    contextId: `${date}:${plan.mode}:${updatedAt}`.slice(0, 300),
+    ignoredContexts: config.ignoredContexts,
+    checklist,
+    screenGate: {
+      target: "tiktok",
+      shouldBlock: incompleteItems.length > 0,
+      gatedItemCount: gatedItems.length,
+      completedGatedItemCount: gatedItems.length - incompleteItems.length,
+      incompleteItems: incompleteItems.map(item => ({ id: item.id, text: item.text })),
+      reason: incompleteItems.length
+        ? `${incompleteItems.length} ${config.label.toLowerCase()} item${incompleteItems.length === 1 ? "" : "s"} must be completed before screen time.`
+        : null,
+    },
+  };
+}
+
+function queueDayContextSync() {
+  clearTimeout(daySyncTimer);
+  daySyncTimer = setTimeout(() => requestStudySync(), 250);
 }
 
 function dayPageProgress(page) {
@@ -2560,11 +2668,12 @@ function dayPageProgress(page) {
 function renderTodayDayPage() {
   if (!S) return;
   const { page, config } = ensureDayPlan(todayISO());
+  const context = buildDayContext(todayISO());
   const progress = dayPageProgress(page);
   $("todayDayMode").textContent = `${config.icon} ${config.label}`;
   $("todayDayTitle").textContent = page.title || config.title;
   $("todayDaySummary").textContent = config.description;
-  $("todayDayProgress").textContent = `${progress.done}/${progress.total} page items ready`;
+  $("todayDayProgress").textContent = `${progress.done}/${progress.total} page items ready${context.screenGate.shouldBlock ? " · TikTok gated" : ""}`;
   $("todayDayProgressBar").style.width = `${progress.percent}%`;
 }
 
@@ -2586,11 +2695,15 @@ function renderDayPlanner() {
   $("dayPageProgress").textContent = `${progress.done}/${progress.total} ready`;
   $("dayChecklist").innerHTML = page.items.length
     ? page.items.map((item, index) => `
-      <label class="day-check-row ${item?.done ? "done" : ""}">
-        <input type="checkbox" data-day-check="${index}" ${item?.done ? "checked" : ""}>
+      <div class="day-check-row ${item?.done ? "done" : ""}">
+        <input type="checkbox" data-day-check="${index}" ${item?.done ? "checked" : ""} aria-label="Mark complete">
         <input type="text" data-day-item-text="${index}" maxlength="160" value="${esc(String(item?.text || ""))}" aria-label="Day page checklist item">
+        <label class="day-gate-toggle" title="TikTok stays gated until this item is complete">
+          <input type="checkbox" data-day-gate="${index}" ${item?.beforeScreenTime ? "checked" : ""}>
+          <span>Before screen time</span>
+        </label>
         <button type="button" data-day-item-delete="${index}" aria-label="Remove checklist item">×</button>
-      </label>`).join("")
+      </div>`).join("")
     : '<p class="study-empty">This page has no checklist items yet.</p>';
   $("dayPageLinks").innerHTML = config.links
     .map(([label, href]) => `<a class="alexa-button" href="${href}">${label}</a>`)
@@ -2606,6 +2719,7 @@ function updateSelectedDayPage(mutator) {
   renderTodayDayPage();
   renderCal();
   $("daySaveStatus").textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · only on this date’s page.`;
+  if (selectedDayPlanDate === todayISO()) queueDayContextSync();
 }
 
 $("dayPlanDate").onchange = event => {
@@ -2620,15 +2734,27 @@ $("dayModeGrid").onclick = event => {
   if (!button || !DAY_MODES[button.dataset.dayMode]) return;
   const { plan } = ensureDayPlan(selectedDayPlanDate);
   plan.mode = button.dataset.dayMode;
+  plan.source = "manual";
   plan.updatedAt = new Date().toISOString();
   save();
   ensureDayPlan(selectedDayPlanDate);
   renderDayPlanner();
   renderCal();
+  if (selectedDayPlanDate === todayISO()) queueDayContextSync();
 };
 $("dayPageTitle").oninput = event => updateSelectedDayPage(page => { page.title = event.target.value.slice(0, 120); });
 $("dayPageNotes").oninput = event => updateSelectedDayPage(page => { page.notes = event.target.value.slice(0, 2000); });
 $("dayChecklist").onchange = event => {
+  const gate = event.target.closest("[data-day-gate]");
+  if (gate) {
+    updateSelectedDayPage(page => {
+      if (page.items[+gate.dataset.dayGate]) {
+        page.items[+gate.dataset.dayGate].beforeScreenTime = gate.checked;
+      }
+    });
+    renderDayPlanner();
+    return;
+  }
   const checkbox = event.target.closest("[data-day-check]");
   if (!checkbox) return;
   updateSelectedDayPage(page => { if (page.items[+checkbox.dataset.dayCheck]) page.items[+checkbox.dataset.dayCheck].done = checkbox.checked; });
@@ -2915,70 +3041,19 @@ $("backpackAddBtn").onclick = () => {
   save(); renderBackpack();
 };
 
-/* ═══════════ Daily report → Poke AI ═══════════ */
-function buildReport() {
-  const name = currentAccount() || "Me";
-  const date = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const todayPage = ensureDayPlan(todayISO());
-  const dayProgress = dayPageProgress(todayPage.page);
-  const nextDayItem = todayPage.page.items.find(item => !item.done && item.text)?.text || "page checklist complete";
-  const habits = todayHabits();
-  const habitsDone = habits.filter(Boolean).length;
-  const bp = todayBackpack();
-  const bpDone = bp.filter(Boolean).length;
-  const todosDone = S.todos.filter(t => t.done);
-  const todosOpen = S.todos.filter(t => !t.done);
-  const todaySessions = S.studySessions.filter(session => {
-    const endedAt = new Date(session.endedAt);
-    return !Number.isNaN(endedAt.getTime()) && isoOf(endedAt) === todayISO();
-  });
-  const todayFocusMinutes = Math.round(todaySessions.reduce((sum, session) => sum + (Number(session.focusedMinutes) || 0), 0));
-  const weekOut = new Date(); weekOut.setDate(weekOut.getDate() + 7);
-  const soon = [
-    ...S.assignments.filter(a => a.status !== "Completed").map(a => ({ what: a.name, where: a.cls, due: a.due })),
-    ...S.exams.map(e => ({ what: e.name, where: e.cls, due: e.date })),
-  ].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d.due) && new Date(d.due + "T23:59:59") <= weekOut)
-   .sort((a, b) => a.due.localeCompare(b.due));
-
-  const lines = [
-    `📊 Daily Report — ${name}`,
-    date,
-    `🗓 Day page: ${todayPage.config.label} — ${todayPage.page.title || todayPage.config.title}`,
-    `   ${dayProgress.done}/${dayProgress.total} ready · Next: ${nextDayItem}`,
-    "",
-    `⭐ Stars: ${S.stars} · 🔥 Habit streak: ${habitStreak()} day(s)`,
-    `🎯 Focus today: ${todayFocusMinutes} min across ${todaySessions.length} session${todaySessions.length === 1 ? "" : "s"}`,
-    "",
-    `✅ Habits today: ${habitsDone}/${S.habits.length}`,
-    ...S.habits.map((h, i) => `  ${habits[i] ? "✔" : "✘"} ${h}`),
-    "",
-    `🎒 Backpack: ${bpDone}/${S.backpack.length} packed${bpDone === S.backpack.length && S.backpack.length ? " — ready!" : ""}`,
-    "",
-    `📝 To-dos done today: ${todosDone.length ? todosDone.map(t => t.txt).join("; ") : "none"}`,
-    `📌 Still open: ${todosOpen.length ? todosOpen.map(t => t.txt).join("; ") : "nothing — all clear!"}`,
-    "",
-    soon.length ? "📅 Due in the next 7 days:" : "📅 Nothing due in the next 7 days 🎉",
-    ...soon.map(d => `  • ${d.what} (${d.where}) — ${fmtDate(d.due)}`),
-  ];
-  return lines.join("\n");
-}
-
-$("reportBtn").onclick = () => {
-  const addr = (S.settings.pokeAddress || "").trim();
-  if (!addr) { $("reportNote").textContent = "Set your Poke number in Customize mode first."; return; }
-  const report = buildReport();
-  const name = currentAccount() || "Scholar OS";
-  // Always copy the report — macOS Messages doesn't always prefill the text
-  if (navigator.clipboard) navigator.clipboard.writeText(report).catch(() => {});
-  // Phone number → open Messages (sms:); anything with @ → open Mail (mailto:)
-  const url = addr.includes("@")
-    ? `mailto:${encodeURIComponent(addr)}?subject=${encodeURIComponent(`Daily Report — ${name} — ${todayISO()}`)}&body=${encodeURIComponent(report)}`
-    : `sms:${encodeURIComponent(addr.replace(/[^0-9+]/g, ""))}&body=${encodeURIComponent(report)}`;
-  window.location.href = url;
-  $("reportNote").textContent = addr.includes("@")
-    ? "Opening Mail — just hit Send! 🚀"
-    : "Opening Messages… if the text box is empty, press ⌘V — the report is copied! 📋";
-  setTimeout(() => { $("reportNote").textContent = ""; }, 8000);
+/* ═══════════ Private Poke companion sync ═══════════ */
+$("reportBtn").onclick = async () => {
+  const note = $("reportNote");
+  note.textContent = "Syncing through the private LockIn bridge…";
+  try {
+    await requestLockInStatus();
+    const companion = lockInBridgeState.companion;
+    note.textContent = companion.connected
+      ? `Poke is synced. Ask “what should I do now?” Profile name is ${companion.identityShared ? "shared" : "private"}; history and day notes are ${companion.privateHistoryShared ? "shared" : "private"}.`
+      : lockInBridgeState.error || "Open Extension settings → LockIn, pair the bridge, then try again.";
+  } catch (error) {
+    note.textContent = error.message;
+  }
 };
 
 /* ═══════════ Derived views ═══════════ */

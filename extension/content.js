@@ -10,6 +10,8 @@
   let toolbarRoot = null;
   let shieldStyle = null;
   let bridgeAnnounced = false;
+  let lastTikTokScrollAt = 0;
+  let tiktokActivityTimer = null;
 
   async function send(type, extra = {}) {
     const response = await chrome.runtime.sendMessage({ type, ...extra });
@@ -63,6 +65,36 @@
     } catch {
       currentSession = null;
     }
+  }
+
+  function isTikTokPage() {
+    return location.hostname === 'tiktok.com' || location.hostname.endsWith('.tiktok.com');
+  }
+
+  function markTikTokScroll() {
+    lastTikTokScrollAt = Date.now();
+  }
+
+  async function reportTikTokActivity() {
+    if (!isTikTokPage() || document.visibilityState !== 'visible') return;
+    try {
+      await send('studyx.tiktokActivity', {
+        activity: {
+          visible: true,
+          scrolling: Date.now() - lastTikTokScrollAt <= 7_000,
+        },
+      });
+    } catch {
+      // Tracking resumes with the next heartbeat if the service worker restarts.
+    }
+  }
+
+  function startTikTokTracking() {
+    if (!isTikTokPage() || tiktokActivityTimer) return;
+    document.addEventListener('scroll', markTikTokScroll, { passive: true });
+    document.addEventListener('wheel', markTikTokScroll, { passive: true });
+    document.addEventListener('touchmove', markTikTokScroll, { passive: true });
+    tiktokActivityTimer = window.setInterval(reportTikTokActivity, 5_000);
   }
 
   function applyYouTubeShield() {
@@ -387,6 +419,9 @@
     if (event.data.type === 'SCHOLAROS_READY' && event.data.context) {
       try {
         await send('studyx.saveScholarContext', { context: event.data.context });
+        if (event.data.snapshot) {
+          await send('studyx.saveScholarSnapshot', { snapshot: event.data.snapshot });
+        }
       } catch {
         // Pulling below will also fail if this page is no longer authorized.
       }
@@ -441,5 +476,6 @@
   });
 
   keepYouTubeShieldMounted();
+  startTikTokTracking();
   refreshState();
 })();

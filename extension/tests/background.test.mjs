@@ -11,17 +11,32 @@ let dynamicRules = [];
 let messageListener = null;
 let alarmListener = null;
 const bridgeFetches = [];
+const companionCommandQueue = [];
+const companionAcks = [];
 
 globalThis.fetch = async (url, options = {}) => {
   const request = { url: String(url), options };
   bridgeFetches.push(request);
   let responseData;
-  if (request.url.endsWith('/bridge/v1/status')) {
+  if (request.url.endsWith('/bridge/v1/companion/sync')) {
+    responseData = { commands: companionCommandQueue.splice(0) };
+  } else if (request.url.endsWith('/bridge/v1/companion/ack')) {
+    const acknowledgement = JSON.parse(options.body);
+    companionAcks.push(acknowledgement);
+    responseData = acknowledgement;
+  } else if (request.url.endsWith('/bridge/v1/status')) {
     responseData = {
       connected: true,
       enforcementReady: true,
       effectiveBlockedDomainCount: 0,
       focusMode: { active: false, startedAt: null, endsAt: null, taskDescription: null },
+      companion: {
+        connected: true,
+        lastSeenAt: Date.now(),
+        secondsSinceSync: 1,
+        pendingCommandCount: 0,
+        extensionVersion: '0.7.0',
+      },
     };
   } else if (request.url.endsWith('/bridge/v1/action')) {
     const action = JSON.parse(options.body);
@@ -90,6 +105,7 @@ globalThis.chrome = {
   },
   runtime: {
     getURL: (path) => `chrome-extension://studyx-test/${path}`,
+    getManifest: () => ({ version: '0.5.0' }),
     onMessage: { addListener(listener) { messageListener = listener; } },
     onInstalled: { addListener() {} },
     onStartup: { addListener() {} },
@@ -124,7 +140,11 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.equal(initial.data.current, null);
   assert.equal(initial.data.settings.defaultDuration, 25);
   assert.equal(initial.data.settings.hideYouTubeRecommendations, false);
-  assert.equal(initial.data.settings.settingsVersion, 5);
+  assert.equal(initial.data.settings.settingsVersion, 7);
+  assert.equal(initial.data.settings.pokeShareIdentity, false);
+  assert.equal(initial.data.settings.pokeSharePrivateHistory, false);
+  assert.equal(initial.data.settings.tiktokTrackingEnabled, true);
+  assert.equal(initial.data.settings.tiktokDailyLimitMinutes, 30);
   assert.equal(initial.data.settings.scholarOsUrl, 'https://nepaliterminal.github.io/scholar-os/');
   assert.ok(initial.data.settings.blockedSites.includes('reddit.com'));
   const scholarSender = { tab: { url: initial.data.settings.scholarOsUrl } };
@@ -133,6 +153,7 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
     settings: {
       ...initial.data.settings,
       alexaBridgeToken: 'private-test-pairing-token',
+      lockInBridgeUrl: 'https://lockin-test.trycloudflare.com/mcp',
       lockInBridgeToken: 'private-lockin-pairing-token',
     },
   }, extensionSender);
@@ -141,6 +162,7 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.equal(savedSettings.data.alexaBridgePaired, true);
   assert.equal(savedSettings.data.lockInBridgeToken, '');
   assert.equal(savedSettings.data.lockInBridgePaired, true);
+  assert.equal(savedSettings.data.lockInBridgeUrl, 'https://lockin-test.trycloudflare.com');
   const privateSettingsView = await send({ type: 'studyx.getSettings' }, extensionSender);
   assert.equal(privateSettingsView.data.alexaBridgeToken, '');
   assert.equal(privateSettingsView.data.alexaBridgePaired, true);
@@ -176,8 +198,13 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.equal(lockInStatus.data.enforcementReady, true);
   assert.equal(lockInStatus.data.report.focusMinutes, 75);
   assert.equal(lockInStatus.data.report.sessionCount, 3);
+  assert.equal(lockInStatus.data.companion.connected, true);
+  assert.equal(lockInStatus.data.companion.identityShared, false);
+  assert.equal(lockInStatus.data.companion.privateHistoryShared, false);
   assert.equal('topRequestedDomains' in lockInStatus.data.report, false);
   assert.equal(JSON.stringify(lockInStatus.data).includes('private.example'), false);
+  assert.ok(bridgeFetches.at(-1).url.startsWith('https://lockin-test.trycloudflare.com/bridge/'));
+  assert.equal(bridgeFetches.at(-1).options.targetAddressSpace, undefined);
   const context = await send({
     type: 'studyx.saveScholarContext',
     context: { account: 'Alex', classes: ['Science', 'Math', 'Science'], stars: 17 },
@@ -302,6 +329,133 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.equal(acknowledged.ok, true);
   const finalState = await send({ type: 'studyx.getState' });
   assert.equal(finalState.data.pendingScholarEvents, 0);
+
+  companionCommandQueue.push({
+    id: '22222222-2222-4222-8222-222222222222',
+    type: 'start_session',
+    payload: { subject: 'Math', intention: 'Poke-started practice', durationMinutes: 15 },
+  });
+  const snapshotSaved = await send({
+    type: 'studyx.saveScholarSnapshot',
+    snapshot: {
+      account: 'Alex',
+      classes: [{ name: 'Math', grade: 'A' }],
+      assignments: [{ name: 'Fractions', cls: 'Math', due: '2026-08-18', status: 'In Progress' }],
+      stars: 17,
+      studySessions: [],
+      day: {
+        date: '2026-08-18', mode: 'school', label: 'Tuesday', title: 'School day', notes: 'Private note',
+        checklist: [{ text: 'Finish fractions', done: false }],
+      },
+    },
+  }, scholarSender);
+  assert.equal(snapshotSaved.ok, true);
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  const pokeStarted = await send({ type: 'studyx.getState' });
+  assert.equal(pokeStarted.data.current.subject, 'Math');
+  assert.equal(pokeStarted.data.current.intention, 'Poke-started practice');
+  assert.equal(companionAcks.at(-1).status, 'completed');
+  assert.equal(companionAcks.at(-1).deviceId, data['studyx.companionDeviceId']);
+  const privateSnapshotRequest = bridgeFetches
+    .filter((request) => request.url.endsWith('/bridge/v1/companion/sync'))
+    .at(-1);
+  const privateSnapshot = JSON.parse(privateSnapshotRequest.options.body);
+  assert.equal(privateSnapshot.scholarContext.account, null);
+  assert.equal(privateSnapshot.dashboard.account, null);
+  assert.equal('notes' in privateSnapshot.dashboard.day, false);
+  assert.deepEqual(privateSnapshot.browser.recentSessions, []);
+
+  companionCommandQueue.push({
+    id: '33333333-3333-4333-8333-333333333333',
+    type: 'stop_session',
+    payload: {},
+  });
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  const pokeStopped = await send({ type: 'studyx.getState' });
+  assert.equal(pokeStopped.data.current, null);
+  assert.equal(companionAcks.at(-1).commandId, '33333333-3333-4333-8333-333333333333');
+
+  const localDay = new Date();
+  const localDate = [
+    localDay.getFullYear(),
+    String(localDay.getMonth() + 1).padStart(2, '0'),
+    String(localDay.getDate()).padStart(2, '0'),
+  ].join('-');
+  const summerSnapshot = {
+    generatedAt: new Date().toISOString(),
+    account: 'Alex',
+    classes: [{ name: 'Math' }],
+    assignments: [],
+    stars: 17,
+    studySessions: [],
+    day: {
+      date: localDate,
+      mode: 'summer',
+      source: 'manual',
+      label: 'Summer Day',
+      description: 'Flexible goals, movement, friends, and screen-time balance.',
+      title: 'Library and pool day',
+      notes: '',
+      updatedAt: new Date().toISOString(),
+      contextId: `${localDate}:summer:test-context`,
+      ignoredContexts: ['school schedule', 'bus times', 'classes', 'backpack routine'],
+      checklist: [{
+        id: 'summer-goal', text: 'Choose one useful goal', done: false, beforeScreenTime: true,
+      }],
+      screenGate: {
+        target: 'tiktok',
+        // The extension must derive this from the checklist instead of trusting
+        // a stale or manipulated precomputed gate supplied by the page.
+        shouldBlock: false,
+        gatedItemCount: 0,
+        completedGatedItemCount: 0,
+        incompleteItems: [],
+        reason: null,
+      },
+    },
+  };
+  const gateSaved = await send({
+    type: 'studyx.saveScholarSnapshot', snapshot: summerSnapshot,
+  }, scholarSender);
+  assert.equal(gateSaved.ok, true);
+  const summerGate = await send({ type: 'studyx.getTikTokStatus' }, extensionSender);
+  assert.equal(summerGate.data.blockReason, 'scholar_gate');
+  assert.equal(summerGate.data.scholarScreenGate.mode, 'summer');
+  assert.ok(data['studyx.scholarSnapshot'].day.ignoredContexts.includes('bus times'));
+  assert.ok(dynamicRules.some((rule) => rule.id === 3000));
+
+  summerSnapshot.day.checklist[0].done = true;
+  summerSnapshot.day.screenGate.shouldBlock = true;
+  summerSnapshot.day.screenGate.completedGatedItemCount = 0;
+  summerSnapshot.day.screenGate.incompleteItems = [{ id: 'fake-task', text: 'Catch the 8:40 bus' }];
+  summerSnapshot.day.screenGate.reason = 'Catch the 8:40 bus first.';
+  await send({ type: 'studyx.saveScholarSnapshot', snapshot: summerSnapshot }, scholarSender);
+  const clearedSummerGate = await send({ type: 'studyx.getTikTokStatus' }, extensionSender);
+  assert.equal(clearedSummerGate.data.blocked, false);
+  assert.equal(dynamicRules.some((rule) => rule.id === 3000), false);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  companionCommandQueue.push({
+    id: '44444444-4444-4444-8444-444444444444',
+    type: 'set_tiktok_policy',
+    payload: { dailyLimitMinutes: 12, trackingEnabled: true },
+  });
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  const pokePolicy = await send({ type: 'studyx.getTikTokStatus' }, extensionSender);
+  assert.equal(pokePolicy.data.dailyLimitMinutes, 12);
+  assert.equal(pokePolicy.data.trackingEnabled, true);
+
+  companionCommandQueue.push({
+    id: '55555555-5555-4555-8555-555555555555',
+    type: 'block_tiktok',
+    payload: { durationMinutes: 10 },
+  });
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  const pokeBlock = await send({ type: 'studyx.getTikTokStatus' }, extensionSender);
+  assert.equal(pokeBlock.data.blocked, true);
+  assert.equal(pokeBlock.data.blockReason, 'manual');
+  assert.ok(dynamicRules.some((rule) => rule.id === 3000));
+
   const forgotten = await send({
     type: 'studyx.saveSettings',
     settings: { ...savedSettings.data, clearAlexaBridgeToken: true, alexaBridgeToken: '' },
@@ -312,6 +466,51 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
     settings: { ...forgotten.data, clearLockInBridgeToken: true, lockInBridgeToken: '' },
   }, extensionSender);
   assert.equal(forgottenLockIn.data.lockInBridgePaired, false);
+});
+
+test('counts only validated TikTok foreground heartbeats and enforces the daily cap', async () => {
+  const currentSettings = await send({ type: 'studyx.getSettings' }, extensionSender);
+  await send({
+    type: 'studyx.saveSettings',
+    settings: {
+      ...currentSettings.data,
+      tiktokTrackingEnabled: true,
+      tiktokDailyLimitMinutes: 5,
+    },
+  }, extensionSender);
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+  data['studyx.tiktokUsage'] = {
+    date,
+    activeSeconds: 298,
+    scrollingSeconds: 200,
+    lastSampleAt: 0,
+    limitReachedAt: null,
+    manualBlockedUntil: null,
+    updatedAt: Date.now(),
+  };
+
+  const ignored = await send({
+    type: 'studyx.tiktokActivity',
+    activity: { visible: true, scrolling: true },
+  }, { tab: { id: 8, active: true, url: 'https://example.com/' } });
+  assert.equal(ignored.data.counted, false);
+  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 298);
+
+  const counted = await send({
+    type: 'studyx.tiktokActivity',
+    activity: { visible: true, scrolling: true },
+  }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } });
+  assert.equal(counted.data.counted, true);
+  assert.equal(counted.data.limitReached, true);
+  assert.equal(counted.data.blocked, true);
+  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 303);
+  assert.equal(data['studyx.tiktokUsage'].scrollingSeconds, 205);
+  assert.ok(dynamicRules.some((rule) => rule.id === 3000));
 });
 
 test('ScholarOS outbox rejects an unconfigured page', async () => {

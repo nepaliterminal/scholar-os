@@ -5,7 +5,7 @@ let allData = null;
 
 function settingsFromForm(extra = {}) {
   return {
-    settingsVersion: 5,
+    settingsVersion: 7,
     defaultDuration: Number(byId('defaultDuration').value),
     blockedSites: cleanSiteLines(),
     youtubeShield: byId('youtubeShield').value,
@@ -16,6 +16,10 @@ function settingsFromForm(extra = {}) {
     alexaBridgeToken: byId('alexaBridgeToken').value.trim(),
     lockInBridgeUrl: byId('lockInBridgeUrl').value.trim(),
     lockInBridgeToken: byId('lockInBridgeToken').value.trim(),
+    pokeShareIdentity: byId('pokeShareIdentity').checked,
+    pokeSharePrivateHistory: byId('pokeSharePrivateHistory').checked,
+    tiktokTrackingEnabled: byId('tiktokTrackingEnabled').checked,
+    tiktokDailyLimitMinutes: Number(byId('tiktokDailyLimitMinutes').value),
     ...extra,
   };
 }
@@ -55,6 +59,21 @@ function updateSiteCount() {
   byId('youtubeConflict').classList.toggle('hidden', !blocksYouTube);
 }
 
+function formatMinutes(seconds) {
+  const minutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60);
+  const remainder = Math.round(Math.max(0, Number(seconds) || 0) % 60);
+  return `${minutes}m ${remainder}s`;
+}
+
+function renderTikTokStatus(status) {
+  const active = formatMinutes(status.activeSeconds);
+  const scrolling = formatMinutes(status.scrollingSeconds);
+  const blocked = status.blocked
+    ? ` TikTok is blocked until ${new Date(status.blockedUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`
+    : '';
+  byId('tiktokStatus').textContent = `Today: ${active} foreground, ${scrolling} scrolling.${blocked}`;
+}
+
 function renderRequests(requests) {
   const container = byId('requestList');
   container.replaceChildren();
@@ -84,9 +103,10 @@ function renderRequests(requests) {
 
 async function load() {
   try {
-    const [settings, exportedData] = await Promise.all([
+    const [settings, exportedData, tiktokStatus] = await Promise.all([
       send('studyx.getSettings'),
       send('studyx.getAllData'),
+      send('studyx.getTikTokStatus'),
     ]);
     allData = exportedData;
     byId('defaultDuration').value = settings.defaultDuration;
@@ -94,6 +114,8 @@ async function load() {
     byId('youtubeShield').value = settings.youtubeShield;
     byId('hideYouTubeShorts').checked = settings.hideYouTubeShorts;
     byId('hideYouTubeRecommendations').checked = settings.hideYouTubeRecommendations;
+    byId('tiktokTrackingEnabled').checked = settings.tiktokTrackingEnabled;
+    byId('tiktokDailyLimitMinutes').value = settings.tiktokDailyLimitMinutes;
     byId('scholarOsUrl').value = settings.scholarOsUrl;
     byId('alexaBridgeUrl').value = settings.alexaBridgeUrl;
     byId('alexaBridgeToken').value = '';
@@ -104,6 +126,8 @@ async function load() {
       ? 'A private pairing token is saved. Enter a new token only to replace it.'
       : 'Not paired yet.';
     byId('lockInBridgeUrl').value = settings.lockInBridgeUrl;
+    byId('pokeShareIdentity').checked = settings.pokeShareIdentity;
+    byId('pokeSharePrivateHistory').checked = settings.pokeSharePrivateHistory;
     byId('lockInBridgeToken').value = '';
     byId('lockInBridgeToken').placeholder = settings.lockInBridgePaired
       ? 'Pairing saved privately'
@@ -112,6 +136,7 @@ async function load() {
       ? 'A private pairing token is saved. Enter a new token only to replace it.'
       : 'Not paired yet.';
     updateSiteCount();
+    renderTikTokStatus(tiktokStatus);
     renderRequests(allData.unblockRequests || []);
   } catch (error) {
     showMessage(error.message, true);
@@ -134,6 +159,7 @@ byId('settingsForm').addEventListener('submit', async (event) => {
     byId('lockInBridgeToken').placeholder = settings.lockInBridgePaired ? 'Pairing saved privately' : 'Run npm run pair:extension in the LockIn folder';
     byId('blockedSites').value = settings.blockedSites.join('\n');
     updateSiteCount();
+    renderTikTokStatus(await send('studyx.getTikTokStatus'));
     showMessage('Settings saved. Active sessions use the new rules immediately.');
   } catch (error) {
     showMessage(error.message, true);
@@ -184,7 +210,7 @@ byId('forgetAlexaPairing').addEventListener('click', async () => {
 
 byId('testLockInBridge').addEventListener('click', async () => {
   const target = byId('lockInBridgeStatus');
-  target.textContent = 'Testing local LockIn bridge…';
+  target.textContent = 'Testing LockIn bridge…';
   try {
     await send('studyx.saveSettings', {
       settings: settingsFromForm(),
@@ -192,6 +218,7 @@ byId('testLockInBridge').addEventListener('click', async () => {
     byId('lockInBridgeToken').value = '';
     byId('lockInBridgeToken').placeholder = 'Pairing saved privately';
     const status = await send('studyx.lockInStatus');
+    await send('studyx.syncCompanion');
     const focus = status.focusMode?.active ? 'focus active' : 'ready';
     const enforcement = status.enforcementReady ? 'system blocking ready' : 'hosts helper needed';
     target.textContent = `Connected · ${focus} · ${enforcement}`;

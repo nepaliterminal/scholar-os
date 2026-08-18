@@ -6,7 +6,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dashboardUrl = pathToFileURL(resolve(here, '../index.html')).href;
+const dashboardPath = resolve(here, '../index.html');
+const dashboardUrl = pathToFileURL(dashboardPath).href;
+const dashboardSource = await readFile(dashboardPath, 'utf8');
+assert.equal(dashboardSource.includes('sms:'), false, 'Poke sync must not export dashboard data through SMS');
+assert.equal(dashboardSource.includes('mailto:'), false, 'Poke sync must not export dashboard data through email');
 const chromeCandidates = [
   process.env.SCHOLAROS_CHROME,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -237,7 +241,6 @@ try {
       completionRate: document.querySelector('#studyCompletionRate').innerText,
       focusStreak: document.querySelector('#studyFocusStreak').innerText,
       subjectAnalytics: document.querySelector('#studySubjectBreakdown').innerText,
-      report: buildReport(),
     };
   })()`);
 
@@ -255,7 +258,51 @@ try {
   assert.equal(integration.completionRate, '100%');
   assert.equal(integration.focusStreak, '1 day');
   assert.match(integration.subjectAnalytics, /Science/);
-  assert.match(integration.report, /Focus today: 25 min across 1 session/);
+
+  const pokeCompanion = await evaluate(`(async () => {
+    studyExtensionAvailable = true;
+    const respond = event => {
+      if (event.source !== window || event.data?.source !== 'scholar-os' || event.data.type !== 'SCHOLAROS_LOCKIN_REQUEST') return;
+      window.postMessage({
+        source: 'studyx-extension',
+        version: 1,
+        type: 'STUDYX_LOCKIN_RESULT',
+        requestId: event.data.requestId,
+        ok: true,
+        data: {
+          connected: true,
+          enforcementReady: true,
+          effectiveBlockedDomainCount: 0,
+          temporaryExceptionCount: 0,
+          focusMode: { active: false, endsAt: null },
+          report: { focusMinutes: 25, sessionCount: 1, completedTasks: 0, temporaryAccessRequests: 0 },
+          companion: {
+            connected: true,
+            lastSeenAt: Date.now(),
+            secondsSinceSync: 1,
+            pendingCommandCount: 0,
+            extensionVersion: '0.7.0',
+            identityShared: false,
+            privateHistoryShared: false,
+          },
+        },
+      }, '*');
+    };
+    window.addEventListener('message', respond);
+    await document.querySelector('#reportBtn').onclick();
+    window.removeEventListener('message', respond);
+    return {
+      button: document.querySelector('#reportBtn').innerText,
+      note: document.querySelector('#reportNote').innerText,
+      status: document.querySelector('#lockInPokeStatus').innerText,
+      legacyBuilderPresent: typeof window.buildReport === 'function',
+    };
+  })()`);
+  assert.match(pokeCompanion.button, /Sync Poke now/);
+  assert.match(pokeCompanion.note, /Poke is synced/);
+  assert.match(pokeCompanion.note, /Profile name is private/);
+  assert.match(pokeCompanion.status, /Poke companion synced/);
+  assert.equal(pokeCompanion.legacyBuilderPresent, false);
 
   const scholarMode = await evaluate(`(async () => {
     const rankedTask = nextScholarTask();
@@ -366,6 +413,7 @@ try {
     eventSyncRendered: true,
     analyticsRendered: true,
     dayPagesSeparated: true,
+    privatePokeCompanion: true,
     alexaPersonalDataStayedInMemory: true,
     replaySafeStars: integration.stars,
     crossAccountEventHeld: true,

@@ -54,6 +54,17 @@
       </section>
 
       <section class="card">
+        <div class="card-heading"><div><p class="eyebrow">TikTok</p><h2>Daily scrolling limit</h2></div></div>
+        <p class="help">Count only visible, foreground TikTok time. Scrolling time is recorded separately; no videos, searches, messages, or page text are saved. ScholarOS can independently gate TikTok for unfinished items explicitly marked “Before screen time” on the active day page.</p>
+        <label class="check-row"><input id="tiktokTrackingEnabled" type="checkbox"><span><strong>Track and enforce the daily limit</strong><small>When the limit is reached, TikTok stays blocked until the next local day.</small></span></label>
+        <label class="compact-field">
+          <span>Daily TikTok limit</span>
+          <span class="number-wrap"><input id="tiktokDailyLimitMinutes" type="number" min="5" max="1440"><small>minutes</small></span>
+        </label>
+        <p id="tiktokStatus" class="callout" aria-live="polite">Loading today’s usage…</p>
+      </section>
+
+      <section class="card">
         <div class="card-heading"><div><p class="eyebrow">Connection</p><h2>ScholarOS bridge</h2></div></div>
         <p class="help">Events remain in a private outbox until this exact dashboard URL acknowledges them.</p>
         <label>
@@ -86,14 +97,20 @@
         <div class="card-heading"><div><p class="eyebrow">LockIn</p><h2>System-wide focus shield</h2></div></div>
         <p class="help">When paired, starting a ScholarOS session also blocks the same sites across this Mac. Ending the session removes only the blocks that ScholarOS started.</p>
         <label>
-          <span>Bridge URL</span>
+          <span>Bridge URL or HTTPS tunnel</span>
           <input id="lockInBridgeUrl" type="url" placeholder="http://127.0.0.1:3847">
         </label>
         <label>
           <span>Pairing token</span>
           <input id="lockInBridgeToken" type="password" autocomplete="off" placeholder="Run npm run pair:extension in the LockIn folder">
         </label>
-        <p class="help">The token stays in private extension storage, is never sent to ScholarOS, and is removed from exports.</p>
+        <p class="help">The token stays in private extension storage, is never sent to the ScholarOS page, and is removed from exports. If Chrome blocks localhost, use your LockIn Cloudflare tunnel base URL without <code>/mcp</code>.</p>
+        <div class="privacy-box">
+          <strong>Poke sharing</strong>
+          <p class="help">Classes, assignments, today’s active day checklist, current focus status, pending access requests, and aggregate TikTok time are shared so Poke can help. These extra personal fields stay private unless you opt in:</p>
+          <label class="check-row"><input id="pokeShareIdentity" type="checkbox"><span><strong>Share ScholarOS profile name</strong><small>Otherwise the synchronized account field is anonymous.</small></span></label>
+          <label class="check-row"><input id="pokeSharePrivateHistory" type="checkbox"><span><strong>Share recent history and day notes</strong><small>Includes completed session summaries and free-form notes from today’s day page.</small></span></label>
+        </div>
         <div class="button-row">
           <button id="testLockInBridge" class="small-button" type="button">Test LockIn connection</button>
           <button id="forgetLockInPairing" class="small-button" type="button">Forget pairing</button>

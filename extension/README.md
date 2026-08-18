@@ -11,6 +11,7 @@ A dependency-free Manifest V3 extension that combines focus sessions, distractio
 - Save page notes even when no text is selected.
 - Include the current playback time with captures made on YouTube.
 - Track highlights, notes, and blocked navigation attempts in the live popup.
+- Track visible foreground TikTok time and scrolling time, with a local daily cap and a dedicated block screen.
 - Create an honest recap with focused time, completion rating, reflection, and suggested ScholarOS stars.
 - Require a reason for school-related access, then approve a five-minute exception or deny it from ScholarOS.
 - Restore blocking automatically when an approved exception expires or the focus session ends.
@@ -21,6 +22,7 @@ A dependency-free Manifest V3 extension that combines focus sessions, distractio
 - Relay explicit Alexa commands from the authorized ScholarOS page to the authenticated localhost bridge.
 - Start and end an ownership-bound LockIn session so the configured domain list is enforced system-wide.
 - Mirror approved temporary site access into that same LockIn session and expose sanitized seven-day totals to ScholarOS.
+- Synchronize a reduced ScholarOS/browser snapshot to LockIn and execute acknowledged, allowlisted Poke commands.
 - Start Scholar Mode's ranked task and focus duration through the authenticated ScholarOS command bridge.
 - Export all local extension data as JSON.
 
@@ -53,7 +55,7 @@ The bridge will not mark events delivered until the ScholarOS page explicitly ac
 4. Open the popup to capture a page note or view live counters.
 5. Let the timer finish or end early, then complete the recap.
 
-Configure blocked domains, YouTube behavior, the ScholarOS URL, and the private Alexa and LockIn bridges from the settings page.
+Configure blocked domains, YouTube behavior, the TikTok daily limit, the ScholarOS URL, and the private Alexa and LockIn bridges from the settings page.
 
 Do not add `youtube.com` to **Blocked websites** if you want to use the thumbnail shield. A blocked domain is redirected completely during a session; the separate YouTube settings control blur/hide behavior while keeping the site available.
 
@@ -67,13 +69,19 @@ Study data stays in `chrome.storage.local` and the selected ScholarOS profile's 
 - `contextMenus`: save selected text from the right-click menu.
 - `tabs` and website access: send capture and session-state messages to normal webpages.
 
-The extension records only explicit captures, session metadata, configured blocked domains, and the count/domain of blocked attempts. It does not store general browsing history.
+The extension records only explicit captures, session metadata, configured blocked domains, aggregate TikTok foreground/scrolling seconds, and the count/domain of blocked attempts. It does not store general browsing history, watched TikTok videos, searches, messages, or TikTok page text.
+
+TikTok tracking defaults to 30 minutes per local calendar day. Only heartbeats from an active, visible TikTok tab are counted. Once the cap is reached, an independent browser redirect rule blocks TikTok until local midnight; this enforcement does not require an active study session or a live Poke connection. Poke can read the aggregate usage, change the cap, or queue an immediate timed TikTok block through LockIn MCP.
+
+ScholarOS supplies a separate date-and-mode-owned screen gate. Only incomplete checklist items on the active School, Summer, or Party page that the user explicitly marks **Before screen time** can activate it. The snapshot includes the active mode's ignored contexts, preventing school schedules, bus times, classes, or backpack routines from becoming reasons on a Summer or Party day. Changing modes or completing the final gated item removes only this ScholarOS-owned gate; a manual Poke block or reached daily TikTok limit remains independent.
 
 Temporary site allowances are scoped to the active focus session, expire after at most 30 minutes (the ScholarOS UI grants five), and are cleared when the session ends. The extension stores the reason and decision with the local request history so the gate remains understandable.
 
 The Alexa pairing token is stored only in the extension's private `chrome.storage.local` area so it can authenticate after restart. ScholarOS never receives it, exports redact it, and Alexa commands are accepted only from the exact configured dashboard. Amazon credentials remain solely in the separate local `alexainit` process. Device/routine names and spoken text are not added to extension exports or ScholarOS storage.
 
-The LockIn bearer token uses the same private-storage and export-redaction boundary. LockIn accepts the bridge only on loopback, with bearer authentication, from a Chrome-extension origin. The extension records the returned LockIn session ID privately and supplies it for stop and temporary-access calls, so it cannot mutate a separately started LockIn session. If LockIn is offline, browser focus still starts and the dashboard reports that the system shield is disconnected.
+The LockIn bearer token uses the same private-storage and export-redaction boundary. LockIn accepts the bridge with bearer authentication from a Chrome-extension origin. The extension can use loopback directly or the user's authenticated HTTPS tunnel when Chrome restricts loopback access. It records the returned LockIn session ID privately and supplies it for stop and temporary-access calls, so it cannot mutate a separately started LockIn session. If LockIn is offline, browser focus still starts and the dashboard reports that the system shield is disconnected.
+
+Every 30 seconds, the extension sends LockIn a bounded snapshot containing its current focus summary, pending access requests, aggregate TikTok time, and the latest ScholarOS classes, assignments, stars, and authoritative day context. ScholarOS profile identity, completed-session history, and free-form day notes are private by default and can be shared explicitly under **Extension settings → LockIn → Poke sharing**. It pulls five command types: start session, stop session, resolve one access request, set the TikTok policy, and block TikTok for a fixed duration. Commands are bound to the extension device that collected them, processed command IDs are retained locally for replay safety, and results are acknowledged to LockIn.
 
 ## Validate
 
@@ -89,6 +97,6 @@ npm run check
 - ScholarOS remains the planner and final authority for classes, assignments, and stars.
 - Alexa commands travel through the authenticated `alexainit` localhost bridge only after an explicit click in ScholarOS.
 - Amazon credentials remain only in the separate `alexainit` process; they never enter this extension.
-- LockIn commands travel through the authenticated `lockinmcp` localhost bridge; its token never enters ScholarOS.
+- LockIn commands travel through the authenticated `lockinmcp` bridge; its token never enters the ScholarOS page.
 
 The bridge event contract is documented in [`docs/scholaros-bridge.md`](docs/scholaros-bridge.md).
