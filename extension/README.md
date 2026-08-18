@@ -71,17 +71,17 @@ Study data stays in `chrome.storage.local` and the selected ScholarOS profile's 
 
 The extension records only explicit captures, session metadata, configured blocked domains, aggregate TikTok foreground/scrolling seconds, and the count/domain of blocked attempts. It does not store general browsing history, watched TikTok videos, searches, messages, or TikTok page text.
 
-TikTok tracking defaults to 30 minutes per local calendar day. Only heartbeats from an active, visible TikTok tab are counted. Once the cap is reached, an independent browser redirect rule blocks TikTok until local midnight; this enforcement does not require an active study session or a live Poke connection. Poke can read the aggregate usage, change the cap, or queue an immediate timed TikTok block through LockIn MCP.
+TikTok tracking defaults to 30 minutes per local calendar day. Only heartbeats from the active, visible TikTok tab in Chrome's last-focused window are counted; an active tab hidden behind another browser window is rejected. Once the cap is reached, an independent browser redirect rule blocks TikTok until local midnight; this enforcement does not require an active study session or a live Poke connection. Poke can read the aggregate usage, change the cap, or queue an immediate timed TikTok block through LockIn MCP. These aggregates cover TikTok in Chrome only; the native iPhone/iPad companion uses Apple's separate on-device Screen Time accounting for the TikTok app.
 
-ScholarOS supplies a separate date-and-mode-owned screen gate. Only incomplete checklist items on the active School, Summer, or Party page that the user explicitly marks **Before screen time** can activate it. The snapshot includes the active mode's ignored contexts, preventing school schedules, bus times, classes, or backpack routines from becoming reasons on a Summer or Party day. Changing modes or completing the final gated item removes only this ScholarOS-owned gate; a manual Poke block or reached daily TikTok limit remains independent.
+ScholarOS supplies a separate date-and-mode-owned screen gate. Only incomplete checklist items on the active School, Summer, or Party page that the user explicitly marks **Before screen time** can activate it. The extension recomputes the gate from the normalized checklist instead of trusting a precomputed `shouldBlock`, reason, or incomplete-item list from the page. The snapshot includes the active mode's ignored contexts, preventing school schedules, bus times, classes, or backpack routines from becoming reasons on a Summer or Party day. Changing modes or completing the final gated item removes only this ScholarOS-owned gate; a manual Poke block or reached daily TikTok limit remains independent.
 
 Temporary site allowances are scoped to the active focus session, expire after at most 30 minutes (the ScholarOS UI grants five), and are cleared when the session ends. The extension stores the reason and decision with the local request history so the gate remains understandable.
 
 The Alexa pairing token is stored only in the extension's private `chrome.storage.local` area so it can authenticate after restart. ScholarOS never receives it, exports redact it, and Alexa commands are accepted only from the exact configured dashboard. Amazon credentials remain solely in the separate local `alexainit` process. Device/routine names and spoken text are not added to extension exports or ScholarOS storage.
 
-The LockIn bearer token uses the same private-storage and export-redaction boundary. LockIn accepts the bridge with bearer authentication from a Chrome-extension origin. The extension can use loopback directly or the user's authenticated HTTPS tunnel when Chrome restricts loopback access. It records the returned LockIn session ID privately and supplies it for stop and temporary-access calls, so it cannot mutate a separately started LockIn session. If LockIn is offline, browser focus still starts and the dashboard reports that the system shield is disconnected.
+The LockIn bridge token uses the same private-storage and export-redaction boundary. Current LockIn builds generate it separately from the MCP credential, and it cannot invoke MCP tools. LockIn accepts the bridge with bearer authentication from a Chrome-extension origin. The extension can use loopback directly or the user's authenticated HTTPS tunnel when Chrome restricts loopback access. It records the returned LockIn session ID privately and supplies it for stop and temporary-access calls, so it cannot mutate a separately started LockIn session. If LockIn is offline, browser focus still starts and the dashboard reports that the system shield is disconnected.
 
-Every 30 seconds, the extension sends LockIn a bounded snapshot containing its current focus summary, pending access requests, aggregate TikTok time, and the latest ScholarOS classes, assignments, stars, and authoritative day context. ScholarOS profile identity, completed-session history, and free-form day notes are private by default and can be shared explicitly under **Extension settings → LockIn → Poke sharing**. It pulls five command types: start session, stop session, resolve one access request, set the TikTok policy, and block TikTok for a fixed duration. Commands are bound to the extension device that collected them, processed command IDs are retained locally for replay safety, and results are acknowledged to LockIn.
+Every 30 seconds, the extension sends LockIn a bounded snapshot containing its current focus summary, pending access requests, aggregate TikTok time, and the latest ScholarOS classes, assignments, stars, and authoritative day context. ScholarOS profile identity, completed-session history, and free-form day notes are private by default and can be shared explicitly under **Extension settings → LockIn → Poke sharing**. It pulls five command types: start session, stop session, resolve one access request, set the TikTok policy, and block TikTok for a fixed duration. Commands must be under a valid pending/delivered lease, unexpired, and addressed to this extension's device ID; processed command IDs are retained locally for replay safety, and results are acknowledged to LockIn.
 
 ## Validate
 
@@ -89,6 +89,12 @@ No installation step is needed. With Node.js available:
 
 ```bash
 npm run check
+```
+
+With Chrome for Testing or Chromium installed, run the real-browser smoke suite in a temporary isolated profile. Branded Google Chrome blocks command-line extension loading; set `CHROME_BIN` when the test browser is outside the standard locations.
+
+```bash
+npm run check:chrome
 ```
 
 ## Project boundaries

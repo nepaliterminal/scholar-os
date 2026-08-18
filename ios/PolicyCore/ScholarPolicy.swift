@@ -234,7 +234,8 @@ struct RemotePolicyCommand: Codable, Equatable {
     var scholarGate: ScholarGateDirective
 
     func validate(now: Date = .now) throws {
-        guard !commandID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let normalizedCommandID = commandID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedCommandID.isEmpty, normalizedCommandID.utf8.count <= 128 else {
             throw RemotePolicyValidationError.missingCommandID
         }
         guard expiresAt > issuedAt, expiresAt > now else {
@@ -251,13 +252,42 @@ struct RemotePolicyCommand: Codable, Equatable {
         }
 
         let taskIDs = scholarGate.incompleteTaskIDs
-        guard taskIDs.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
-              Set(taskIDs).count == taskIDs.count else {
+        let normalizedTaskIDs = taskIDs.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard taskIDs.count <= 100,
+              normalizedTaskIDs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 200 }),
+              Set(normalizedTaskIDs).count == normalizedTaskIDs.count else {
             throw RemotePolicyValidationError.invalidTaskIDs
         }
         guard scholarGate.shouldBlock || taskIDs.isEmpty else {
             throw RemotePolicyValidationError.conflictingGateState
         }
+    }
+}
+
+struct RemoteCommandReceipt: Codable, Equatable {
+    let commandID: String
+    let expiresAt: Date
+    let reservedAt: Date
+}
+
+struct RemoteCommandReplayGuard: Codable, Equatable {
+    private(set) var receipts: [RemoteCommandReceipt] = []
+
+    mutating func reserve(_ command: RemotePolicyCommand, now: Date = .now) throws {
+        try command.validate(now: now)
+        let commandID = command.commandID.trimmingCharacters(in: .whitespacesAndNewlines)
+        receipts.removeAll { $0.expiresAt <= now }
+        guard !receipts.contains(where: { $0.commandID == commandID }) else {
+            throw RemotePolicyValidationError.duplicateCommand
+        }
+        receipts.append(.init(
+            commandID: commandID,
+            expiresAt: command.expiresAt,
+            reservedAt: now
+        ))
+        receipts = Array(receipts.suffix(100))
     }
 }
 
@@ -269,4 +299,5 @@ enum RemotePolicyValidationError: Error, Equatable {
     case invalidDailyLimit
     case invalidTaskIDs
     case conflictingGateState
+    case duplicateCommand
 }

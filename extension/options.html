@@ -104,7 +104,7 @@
           <span>Pairing token</span>
           <input id="lockInBridgeToken" type="password" autocomplete="off" placeholder="Run npm run pair:extension in the LockIn folder">
         </label>
-        <p class="help">The token stays in private extension storage, is never sent to the ScholarOS page, and is removed from exports. If Chrome blocks localhost, use your LockIn Cloudflare tunnel base URL without <code>/mcp</code>.</p>
+        <p class="help">The bridge-scoped token stays in private extension storage, is never sent to the ScholarOS page, is removed from exports, and cannot invoke MCP tools. If Chrome blocks localhost, use your LockIn Cloudflare tunnel base URL without <code>/mcp</code>.</p>
         <div class="privacy-box">
           <strong>Poke sharing</strong>
           <p class="help">Classes, assignments, today’s active day checklist, current focus status, pending access requests, and aggregate TikTok time are shared so Poke can help. These extra personal fields stay private unless you opt in:</p>

@@ -55,6 +55,7 @@ const MAX_SESSIONS = 200;
 const MAX_CAPTURES = 1500;
 const MAX_EVENTS = 500;
 const MAX_REQUESTS = 200;
+let tiktokActivityTail = Promise.resolve();
 
 function id(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`;
@@ -448,15 +449,29 @@ async function recordTikTokActivity(input, sender) {
   if (!sender?.tab?.active || !isTikTokUrl(sender.tab.url) || input?.visible !== true) {
     return { counted: false, ...(await getTikTokStatus()) };
   }
+  // Chrome can mark one tab active in every window. Count only the active tab in
+  // the last-focused browser window so a visible TikTok tab behind another
+  // window cannot inflate foreground time.
+  try {
+    const foregroundTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (!foregroundTabs.some((tab) => tab.id === sender.tab.id)) {
+      return { counted: false, ...(await getTikTokStatus()) };
+    }
+  } catch {
+    return { counted: false, ...(await getTikTokStatus()) };
+  }
   const settings = await getSettings();
   if (!settings.tiktokTrackingEnabled) return { counted: false, ...(await getTikTokStatus()) };
 
   const now = Date.now();
   const stored = await chrome.storage.local.get(KEYS.tiktokUsage);
   const usage = normalizeTikTokUsage(stored[KEYS.tiktokUsage] || {}, now);
-  const elapsedSeconds = usage.lastSampleAt > 0
-    ? Math.min(TIKTOK_MAX_SAMPLE_SECONDS, Math.max(0, Math.round((now - usage.lastSampleAt) / 1_000)))
-    : TIKTOK_SAMPLE_SECONDS;
+  const reportedSampleSeconds = Number(input?.sampleSeconds);
+  const elapsedSeconds = Number.isFinite(reportedSampleSeconds)
+    ? Math.min(TIKTOK_MAX_SAMPLE_SECONDS, Math.max(0, Math.round(reportedSampleSeconds)))
+    : usage.lastSampleAt > 0
+      ? Math.min(TIKTOK_MAX_SAMPLE_SECONDS, Math.max(0, Math.round((now - usage.lastSampleAt) / 1_000)))
+      : TIKTOK_SAMPLE_SECONDS;
   if (elapsedSeconds > 0) {
     usage.activeSeconds += elapsedSeconds;
     if (input?.scrolling === true) usage.scrollingSeconds += elapsedSeconds;
@@ -478,6 +493,12 @@ async function recordTikTokActivity(input, sender) {
     }).catch(() => {});
   }
   return { counted: elapsedSeconds > 0, ...status };
+}
+
+function enqueueTikTokActivity(input, sender) {
+  const operation = tiktokActivityTail.then(() => recordTikTokActivity(input, sender));
+  tiktokActivityTail = operation.then(() => undefined, () => undefined);
+  return operation;
 }
 
 async function redirectOpenTikTokTabs(reason) {
@@ -1148,10 +1169,15 @@ async function acknowledgeCompanionCommand(processed) {
 
 async function runCompanionCommand(command) {
   const commandId = cleanText(command?.id, 100);
-  if (!commandId) return;
-  const stored = await chrome.storage.local.get(KEYS.processedCompanionCommands);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(commandId)) return;
+  const stored = await chrome.storage.local.get([
+    KEYS.processedCompanionCommands,
+    KEYS.companionDeviceId,
+  ]);
+  const deviceId = await getCompanionDeviceId(stored[KEYS.companionDeviceId]);
+  if (command?.targetDeviceId !== deviceId) return;
   const processedCommands = Array.isArray(stored[KEYS.processedCompanionCommands])
-    ? stored[KEYS.processedCompanionCommands]
+    ? structuredClone(stored[KEYS.processedCompanionCommands])
     : [];
   const previous = processedCommands.find((item) => item?.id === commandId);
   if (previous) {
@@ -1160,7 +1186,47 @@ async function runCompanionCommand(command) {
   }
 
   let processed;
-  try {
+  const now = Date.now();
+  const createdAt = Number(command?.createdAt);
+  const expiresAt = Number(command?.expiresAt);
+  const validCommandWindow = Number.isFinite(createdAt) &&
+    Number.isFinite(expiresAt) &&
+    createdAt <= now + 5 * 60_000 &&
+    expiresAt > now &&
+    expiresAt > createdAt &&
+    expiresAt - createdAt <= 15 * 60_000;
+  const deliverableStatus = command?.status === 'pending' || command?.status === 'delivered';
+  const deliveredAt = Number(command?.deliveredAt);
+  const leaseExpiresAt = Number(command?.leaseExpiresAt);
+  const validDeliveryLease = command?.status !== 'delivered' || (
+    Number.isFinite(deliveredAt) &&
+    Number.isFinite(leaseExpiresAt) &&
+    deliveredAt <= now + 5 * 60_000 &&
+    leaseExpiresAt > now &&
+    leaseExpiresAt > deliveredAt &&
+    leaseExpiresAt <= expiresAt
+  );
+  if (!deliverableStatus || !validCommandWindow || !validDeliveryLease) {
+    processed = {
+      id: commandId,
+      status: 'failed',
+      result: null,
+      error: 'The Poke companion command expired or was not deliverable.',
+    };
+  } else try {
+    // Reserve the command ID durably before the browser mutation. If Chrome is
+    // terminated in the narrow gap that follows, lease redelivery acknowledges
+    // this failure receipt instead of repeating a possibly completed mutation.
+    const reservation = {
+      id: commandId,
+      status: 'failed',
+      result: null,
+      error: 'Command processing was interrupted and was not replayed.',
+    };
+    await chrome.storage.local.set({
+      [KEYS.processedCompanionCommands]: [...processedCommands, reservation].slice(-100),
+    });
+
     let result;
     if (command.type === 'start_session') {
       const session = await startSession(command.payload || {});
@@ -1198,9 +1264,10 @@ async function runCompanionCommand(command) {
       error: cleanText(error?.message || error, 500) || 'Command failed.',
     };
   }
-  processedCommands.push(processed);
+  const completedReceipts = processedCommands.filter((item) => item?.id !== commandId);
+  completedReceipts.push(processed);
   await chrome.storage.local.set({
-    [KEYS.processedCompanionCommands]: processedCommands.slice(-100),
+    [KEYS.processedCompanionCommands]: completedReceipts.slice(-100),
   });
   await acknowledgeCompanionCommand(processed).catch(() => {});
 }
@@ -1456,7 +1523,7 @@ async function handleMessage(message, sender) {
     case 'studyx.blockedAttempt':
       return recordBlockedAttempt(message.site);
     case 'studyx.tiktokActivity':
-      return recordTikTokActivity(message.activity || {}, sender);
+      return enqueueTikTokActivity(message.activity || {}, sender);
     case 'studyx.requestUnblock':
       return recordBlockedAttempt(message.site, message.reason, false);
     case 'studyx.resolveUnblock':

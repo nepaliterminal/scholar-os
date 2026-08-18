@@ -80,6 +80,8 @@ Recommended remote payload:
 
 Do not place an MCP bearer token directly in the app bundle. Use short-lived device credentials stored in the Keychain when the cloud adapter is added.
 
+The pure policy core already validates a 15-minute maximum command window, bounded identifiers, coherent gate state, and a durable pre-mutation replay receipt. A future adapter must additionally authenticate the signed envelope, verify that its target device ID matches this installation, reserve the command ID before applying it, and persist the final result. These policy checks do not authenticate a network response by themselves.
+
 ## Native validation
 
 From the ScholarOS repository root:

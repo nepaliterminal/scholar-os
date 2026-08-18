@@ -51,7 +51,7 @@ For local development, enable **Allow access to file URLs**, copy the exact loca
 The companion bridge lives in `/Users/subed/alexainit` on this Mac.
 
 1. Run `npm run bridge` in that folder and keep it open.
-2. In a second terminal in the same folder, run `npm run bridge:pair`.
+2. In a second terminal in the same folder, run `npm run bridge:pair`; the token is copied to the clipboard without being printed.
 3. Paste the token directly into **Study Session OS → Extension settings → Alexa** and select **Test Alexa connection**. Never paste the token into chat or source code.
 4. Reload ScholarOS and open **Alexa Controls**.
 
@@ -62,7 +62,7 @@ The Amazon session and bridge token remain in gitignored, owner-only local files
 The local enforcement service lives in `/Users/subed/lockinmcp` on this Mac.
 
 1. Build and start LockIn with `npm run build` and `npm start` in that folder.
-2. In a second terminal there, run `npm run pair:extension`. The private token is copied directly to the clipboard and is not printed.
+2. In a second terminal there, run `npm run pair:extension`. The bridge-scoped token is copied directly to the clipboard and is not printed; it cannot invoke LockIn's MCP tools.
 3. Paste it into **Study Session OS → Extension settings → LockIn**, then select **Test LockIn connection**. Use `http://127.0.0.1:3847` when Chrome permits loopback access, or the active LockIn HTTPS tunnel base URL without `/mcp`. Never paste the token into chat or source code.
 4. Reload ScholarOS. The LockIn card will show system blocking readiness and seven-day totals.
 

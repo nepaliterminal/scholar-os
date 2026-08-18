@@ -215,9 +215,44 @@ struct RemotePolicyCommandTests {
         }
 
         var duplicate = command()
-        duplicate.scholarGate.incompleteTaskIDs = ["task-1", "task-1"]
+        duplicate.scholarGate.incompleteTaskIDs = ["task-1", " task-1 "]
         #expect(throws: RemotePolicyValidationError.invalidTaskIDs) {
             try duplicate.validate(now: now)
+        }
+    }
+
+    @Test("Command receipts are reserved before mutation and reject replay")
+    func replayGuard() throws {
+        var guardState = RemoteCommandReplayGuard()
+        let valid = command()
+        try guardState.reserve(valid, now: now)
+        #expect(guardState.receipts.map(\.commandID) == [valid.commandID])
+        var whitespaceReplay = valid
+        whitespaceReplay.commandID = "  \(valid.commandID)  "
+        #expect(throws: RemotePolicyValidationError.duplicateCommand) {
+            try guardState.reserve(whitespaceReplay, now: now)
+        }
+
+        var later = command()
+        later.commandID = "command-2"
+        later.issuedAt = valid.expiresAt
+        later.expiresAt = valid.expiresAt.addingTimeInterval(5 * 60)
+        try guardState.reserve(later, now: valid.expiresAt)
+        #expect(guardState.receipts.map(\.commandID) == [later.commandID])
+    }
+
+    @Test("Oversized command and task identifiers are rejected")
+    func boundedIdentifiers() {
+        var oversizedCommand = command()
+        oversizedCommand.commandID = String(repeating: "x", count: 129)
+        #expect(throws: RemotePolicyValidationError.missingCommandID) {
+            try oversizedCommand.validate(now: now)
+        }
+
+        var tooManyTasks = command()
+        tooManyTasks.scholarGate.incompleteTaskIDs = (0...100).map { "task-\($0)" }
+        #expect(throws: RemotePolicyValidationError.invalidTaskIDs) {
+            try tooManyTasks.validate(now: now)
         }
     }
 }

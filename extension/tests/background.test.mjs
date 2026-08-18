@@ -13,13 +13,30 @@ let alarmListener = null;
 const bridgeFetches = [];
 const companionCommandQueue = [];
 const companionAcks = [];
+const storageWrites = [];
 
 globalThis.fetch = async (url, options = {}) => {
   const request = { url: String(url), options };
   bridgeFetches.push(request);
   let responseData;
   if (request.url.endsWith('/bridge/v1/companion/sync')) {
-    responseData = { commands: companionCommandQueue.splice(0) };
+    const snapshot = JSON.parse(options.body);
+    const now = Date.now();
+    responseData = {
+      commands: companionCommandQueue.splice(0).map((command) => ({
+        targetDeviceId: snapshot.deviceId,
+        status: 'delivered',
+        createdAt: now,
+        expiresAt: now + 10 * 60_000,
+        deliveredAt: now,
+        leaseExpiresAt: now + 60_000,
+        deliveryAttempts: 1,
+        completedAt: null,
+        result: null,
+        error: null,
+        ...command,
+      })),
+    };
   } else if (request.url.endsWith('/bridge/v1/companion/ack')) {
     const acknowledgement = JSON.parse(options.body);
     companionAcks.push(acknowledgement);
@@ -76,7 +93,11 @@ globalThis.chrome = {
     local: {
       setAccessLevel: async () => { throw new Error('simulated managed-browser restriction'); },
       get: async (keys) => storageGet(keys),
-      set: async (updates) => Object.assign(data, structuredClone(updates)),
+      set: async (updates) => {
+        const copy = structuredClone(updates);
+        storageWrites.push(copy);
+        Object.assign(data, copy);
+      },
       remove: async (keys) => {
         for (const key of Array.isArray(keys) ? keys : [keys]) delete data[key];
       },
@@ -100,7 +121,9 @@ globalThis.chrome = {
     setBadgeText: async () => {},
   },
   tabs: {
-    query: async () => [],
+    query: async (queryInfo = {}) => queryInfo.lastFocusedWindow
+      ? [{ id: 9, active: true, url: 'https://www.tiktok.com/foryou' }]
+      : [],
     sendMessage: async () => ({ ok: true }),
   },
   runtime: {
@@ -354,6 +377,18 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   const pokeStarted = await send({ type: 'studyx.getState' });
   assert.equal(pokeStarted.data.current.subject, 'Math');
   assert.equal(pokeStarted.data.current.intention, 'Poke-started practice');
+  const reservation = storageWrites.find((write) =>
+    write['studyx.processedCompanionCommands']?.some((receipt) =>
+      receipt.id === '22222222-2222-4222-8222-222222222222' &&
+      receipt.status === 'failed' &&
+      /interrupted/i.test(receipt.error),
+    ));
+  assert.ok(reservation, 'the command ID must be reserved before its browser mutation');
+  assert.equal(
+    data['studyx.processedCompanionCommands'].find((receipt) =>
+      receipt.id === '22222222-2222-4222-8222-222222222222')?.status,
+    'completed',
+  );
   assert.equal(companionAcks.at(-1).status, 'completed');
   assert.equal(companionAcks.at(-1).deviceId, data['studyx.companionDeviceId']);
   const privateSnapshotRequest = bridgeFetches
@@ -446,6 +481,29 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   assert.equal(pokePolicy.data.trackingEnabled, true);
 
   companionCommandQueue.push({
+    id: '66666666-6666-4666-8666-666666666666',
+    type: 'block_tiktok',
+    payload: { durationMinutes: 1_440 },
+    expiresAt: Date.now() - 1,
+  });
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  assert.equal(companionAcks.at(-1).commandId, '66666666-6666-4666-8666-666666666666');
+  assert.equal(companionAcks.at(-1).status, 'failed');
+  assert.match(companionAcks.at(-1).error, /expired/i);
+
+  companionCommandQueue.push({
+    id: '77777777-7777-4777-8777-777777777777',
+    type: 'block_tiktok',
+    payload: { durationMinutes: 1_440 },
+    deliveredAt: Date.now() - 2 * 60_000,
+    leaseExpiresAt: Date.now() - 60_000,
+  });
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  assert.equal(companionAcks.at(-1).commandId, '77777777-7777-4777-8777-777777777777');
+  assert.equal(companionAcks.at(-1).status, 'failed');
+  assert.match(companionAcks.at(-1).error, /deliverable/i);
+
+  companionCommandQueue.push({
     id: '55555555-5555-4555-8555-555555555555',
     type: 'block_tiktok',
     payload: { durationMinutes: 10 },
@@ -501,15 +559,29 @@ test('counts only validated TikTok foreground heartbeats and enforces the daily 
   assert.equal(ignored.data.counted, false);
   assert.equal(data['studyx.tiktokUsage'].activeSeconds, 298);
 
-  const counted = await send({
+  const backgroundWindow = await send({
     type: 'studyx.tiktokActivity',
     activity: { visible: true, scrolling: true },
-  }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } });
+  }, { tab: { id: 10, active: true, url: 'https://www.tiktok.com/foryou' } });
+  assert.equal(backgroundWindow.data.counted, false);
+  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 298);
+
+  const [counted, concurrent] = await Promise.all([
+    send({
+      type: 'studyx.tiktokActivity',
+      activity: { visible: true, scrolling: true, sampleSeconds: 1 },
+    }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } }),
+    send({
+      type: 'studyx.tiktokActivity',
+      activity: { visible: true, scrolling: true, sampleSeconds: 1 },
+    }, { tab: { id: 9, active: true, url: 'https://www.tiktok.com/foryou' } }),
+  ]);
   assert.equal(counted.data.counted, true);
-  assert.equal(counted.data.limitReached, true);
-  assert.equal(counted.data.blocked, true);
-  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 303);
-  assert.equal(data['studyx.tiktokUsage'].scrollingSeconds, 205);
+  assert.equal(concurrent.data.counted, true);
+  assert.equal(concurrent.data.limitReached, true);
+  assert.equal(concurrent.data.blocked, true);
+  assert.equal(data['studyx.tiktokUsage'].activeSeconds, 300);
+  assert.equal(data['studyx.tiktokUsage'].scrollingSeconds, 202);
   assert.ok(dynamicRules.some((rule) => rule.id === 3000));
 });
 
