@@ -11,6 +11,7 @@
   let shieldStyle = null;
   let bridgeAnnounced = false;
   let lastTikTokScrollAt = 0;
+  let lastTikTokSampleAt = Date.now();
   let tiktokActivityTimer = null;
 
   async function send(type, extra = {}) {
@@ -77,11 +78,15 @@
 
   async function reportTikTokActivity() {
     if (!isTikTokPage() || document.visibilityState !== 'visible') return;
+    const sampledAt = Date.now();
+    const sampleSeconds = Math.max(0, (sampledAt - lastTikTokSampleAt) / 1_000);
+    lastTikTokSampleAt = sampledAt;
     try {
       await send('studyx.tiktokActivity', {
         activity: {
           visible: true,
           scrolling: Date.now() - lastTikTokScrollAt <= 7_000,
+          sampleSeconds,
         },
       });
     } catch {
@@ -94,6 +99,12 @@
     document.addEventListener('scroll', markTikTokScroll, { passive: true });
     document.addEventListener('wheel', markTikTokScroll, { passive: true });
     document.addEventListener('touchmove', markTikTokScroll, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      // Do not count the time since the last heartbeat after a hidden tab
+      // becomes visible again, and require a new scroll signal.
+      lastTikTokSampleAt = Date.now();
+      lastTikTokScrollAt = 0;
+    });
     tiktokActivityTimer = window.setInterval(reportTikTokActivity, 5_000);
   }
 
@@ -402,6 +413,12 @@
     const requestId = String(message.requestId || '').slice(0, 100);
     if (!requestId) return;
     try {
+      if (message.context) {
+        await send('studyx.saveScholarContext', { context: message.context });
+      }
+      if (message.snapshot) {
+        await send('studyx.saveScholarSnapshot', { snapshot: message.snapshot });
+      }
       const data = await send('studyx.lockInStatus');
       postToScholarOs({ type: 'STUDYX_LOCKIN_RESULT', requestId, ok: true, data });
     } catch (error) {

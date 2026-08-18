@@ -1320,7 +1320,17 @@ function sendAlexaRequest(operation, command = {}) {
 function sendLockInRequest() {
   if (!studyExtensionAvailable) return Promise.reject(new Error("Study Session OS is not connected."));
   const requestId = `lockin_${Date.now().toString(36)}_${++lockInRequestNumber}`;
-  postToStudyExtension({ type: "SCHOLAROS_LOCKIN_REQUEST", requestId, operation: "status" });
+  postToStudyExtension({
+    type: "SCHOLAROS_LOCKIN_REQUEST",
+    requestId,
+    operation: "status",
+    context: {
+      account: currentAccount(),
+      classes: S?.classes?.map(item => item.name).filter(Boolean) || [],
+      stars: Number(S?.stars) || 0,
+    },
+    snapshot: buildScholarSnapshot(),
+  });
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pendingLockInRequests.delete(requestId);

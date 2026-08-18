@@ -261,8 +261,10 @@ try {
 
   const pokeCompanion = await evaluate(`(async () => {
     studyExtensionAvailable = true;
+    let requestedSnapshot = null;
     const respond = event => {
       if (event.source !== window || event.data?.source !== 'scholar-os' || event.data.type !== 'SCHOLAROS_LOCKIN_REQUEST') return;
+      requestedSnapshot = event.data.snapshot;
       window.postMessage({
         source: 'studyx-extension',
         version: 1,
@@ -296,6 +298,8 @@ try {
       note: document.querySelector('#reportNote').innerText,
       status: document.querySelector('#lockInPokeStatus').innerText,
       legacyBuilderPresent: typeof window.buildReport === 'function',
+      requestedMode: requestedSnapshot?.day?.mode || null,
+      requestedDate: requestedSnapshot?.day?.date || null,
     };
   })()`);
   assert.match(pokeCompanion.button, /Sync Poke now/);
@@ -303,6 +307,8 @@ try {
   assert.match(pokeCompanion.note, /Profile name is private/);
   assert.match(pokeCompanion.status, /Poke companion synced/);
   assert.equal(pokeCompanion.legacyBuilderPresent, false);
+  assert.ok(['school', 'summer', 'party'].includes(pokeCompanion.requestedMode));
+  assert.equal(pokeCompanion.requestedDate, new Date().toISOString().slice(0, 10));
 
   const scholarMode = await evaluate(`(async () => {
     const rankedTask = nextScholarTask();
