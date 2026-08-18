@@ -55,6 +55,7 @@ const MAX_SESSIONS = 200;
 const MAX_CAPTURES = 1500;
 const MAX_EVENTS = 500;
 const MAX_REQUESTS = 200;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 let tiktokActivityTail = Promise.resolve();
 let defaultsPromise = null;
 
@@ -330,7 +331,7 @@ async function performEnsureDefaults() {
   if (!Array.isArray(stored[KEYS.events])) updates[KEYS.events] = [];
   if (!stored[KEYS.scholarContext]) updates[KEYS.scholarContext] = normalizeScholarContext();
   if (!stored[KEYS.scholarSnapshot]) updates[KEYS.scholarSnapshot] = null;
-  if (!/^[0-9a-f-]{36}$/i.test(String(stored[KEYS.companionDeviceId] || ''))) {
+  if (!UUID_PATTERN.test(String(stored[KEYS.companionDeviceId] || ''))) {
     updates[KEYS.companionDeviceId] = crypto.randomUUID();
   }
   if (!Array.isArray(stored[KEYS.processedCompanionCommands])) {
@@ -1085,7 +1086,7 @@ async function lockInBridgeRequest(path, requestOptions = {}, settings = null) {
 
 async function getCompanionDeviceId(storedValue = '') {
   let deviceId = String(storedValue || '');
-  if (!/^[0-9a-f-]{36}$/i.test(deviceId)) {
+  if (!UUID_PATTERN.test(deviceId)) {
     deviceId = crypto.randomUUID();
     await chrome.storage.local.set({ [KEYS.companionDeviceId]: deviceId });
   }
@@ -1185,7 +1186,7 @@ async function acknowledgeCompanionCommand(processed) {
 
 async function runCompanionCommand(command) {
   const commandId = cleanText(command?.id, 100);
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(commandId)) return;
+  if (!UUID_PATTERN.test(commandId)) return;
   const stored = await chrome.storage.local.get([
     KEYS.processedCompanionCommands,
     KEYS.companionDeviceId,

@@ -365,6 +365,14 @@ test('focus lifecycle, blocking, capture, recap, and ScholarOS outbox', async ()
   const finalState = await send({ type: 'studyx.getState' });
   assert.equal(finalState.data.pendingScholarEvents, 0);
 
+  data['studyx.companionDeviceId'] = '-'.repeat(36);
+  await send({ type: 'studyx.syncCompanion' }, extensionSender);
+  assert.match(
+    data['studyx.companionDeviceId'],
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    'a malformed persisted device ID must self-heal before synchronization',
+  );
+
   companionCommandQueue.push({
     id: '22222222-2222-4222-8222-222222222222',
     type: 'start_session',
